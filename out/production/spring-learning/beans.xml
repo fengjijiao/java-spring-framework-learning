@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--beans.xml用于给不同的bean分配唯一的ID，并给相应的bean属性赋值。例如，我们可以在不影响其他类的情况下，给message变量赋值。-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+<!--启用注释-->
+    <context:annotation-config/>
+    <!--    first-->
+    <bean id="helloWorld" class="us.fjj.spring.learning.HelloWorld">
+        <property name="message" value="Hello World!"/>
+    </bean>
+<!--    依赖注入-->
+<!--    构造函数方式-->
+    <bean id="man" class="us.fjj.spring.learning.DependencyInjection.Man">
+        <constructor-arg value="laokai"/>
+        <constructor-arg value="3" type="int"/>
+    </bean>
+    <bean id="person" class="us.fjj.spring.learning.DependencyInjection.Person">
+        <constructor-arg ref="man" type="us.fjj.spring.learning.DependencyInjection$Man"/>
+    </bean>
+<!--    setter方式-->
+    <bean id="man2" class="us.fjj.spring.learning.DependencyInjection2.Man">
+        <property name="age" value="3"/>
+        <property name="name" value="laokai"/>
+    </bean>
+    <bean id="person2" class="us.fjj.spring.learning.DependencyInjection2.Person">
+        <property name="man" ref="man2"/>
+    </bean>
+
+<!--    注入内部bean-->
+    <bean id="person3" class="us.fjj.spring.learning.DependencyInjection2.Person">
+        <property name="man">
+            <bean class="us.fjj.spring.learning.DependencyInjection2.Man">
+                <property name="name" value="laokai"/>
+                <property name="age" value="3"/>
+            </bean>
+        </property>
+    </bean>
+
+<!--    注入集合-->
+    <bean id="javaCollection" class="us.fjj.spring.learning.JavaCollection">
+        <property name="list">
+            <list>
+                <ref bean="man"/>
+                <ref bean="man2"/>
+                <value>www.google.com</value>
+                <value>www.google.com.hk</value>
+                <value>www.google.com.sg</value>
+                <value>www.google.co.uk</value>
+                <value>www.google.tk</value>
+                <value>www.google.tk</value>
+                <value>www.google.tk</value>
+            </list>
+        </property>
+        <property name="set">
+            <set>
+<!--                不能重复-->
+                <ref bean="man"/>
+                <ref bean="man2"/>
+                <value>www.google.com</value>
+                <value>www.google.com.hk</value>
+                <value>www.google.com.sg</value>
+                <value>www.google.co.uk</value>
+                <value>www.google.co.au</value>
+                <value>www.google.tk</value>
+            </set>
+        </property>
+        <property name="map">
+            <map>
+<!--                key,value可为任意类型-->
+                <entry key="0" value-ref="man"/>
+                <entry key-ref="man" value-ref="man2"/>
+                <entry key="1" value="www"/>
+                <entry key="2" value="google"/>
+                <entry key="3" value="com"/>
+            </map>
+        </property>
+        <property name="props">
+            <props>
+<!--                key, value均为字符串-->
+                <prop key="one">www</prop>
+                <prop key="two">google</prop>
+                <prop key="three">tk</prop>
+            </props>
+        </property>
+    </bean>
+
+<!--    <bean id="man4" class="us.fjj.spring.learning.DependencyInjection2.Man">-->
+<!--&lt;!&ndash;        传入空字符串的值&ndash;&gt;-->
+<!--        <property name="name" value=""/>-->
+<!--&lt;!&ndash;        传入null&ndash;&gt;-->
+<!--        <property name="age"><null/></property>-->
+<!--    </bean>-->
+
+<!--    Qualifier注释Demo-->
+    <bean id="profile" class="us.fjj.spring.learning.QualifierDemo.Profile"/>
+    <bean id="student1" class="us.fjj.spring.learning.QualifierDemo.Student">
+        <property name="name" value="loakia"/>
+        <property name="id" value="12138"/>
+    </bean>
+
+<!--    annotation demo-->
+<!--    使用context命名空间，通知spring扫描指定目录，进行注解的解析-->
+    <context:component-scan base-package="us.fjj.spring.learning"/>
+</beans>
