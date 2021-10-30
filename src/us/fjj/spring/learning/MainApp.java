@@ -3,6 +3,7 @@ package us.fjj.spring.learning;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import us.fjj.spring.learning.annotationdemo.UserController;
+import us.fjj.spring.learning.aopdemo.CustomerDaoImpl;
 
 public class MainApp {
     public static void main(String[] args) {
@@ -78,5 +79,19 @@ public class MainApp {
         //1.U should!
         //2.U shoudl!!!
         //注解Demo end
+
+
+        //op demo start
+        //AspectJ基于xml的声明式
+        CustomerDaoImpl customerDao = (CustomerDaoImpl) context.getBean("customerDao");
+        //执行方法
+        customerDao.add();
+        //前置通知，方法名：add
+        //环绕开始
+        //添加客户...
+        //最终通知
+        //环绕结束
+        //后置通知，返回值：null
+        //op demo end
     }
 }

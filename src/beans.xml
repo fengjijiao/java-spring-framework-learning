@@ -2,8 +2,8 @@
 <!--beans.xml用于给不同的bean分配唯一的ID，并给相应的bean属性赋值。例如，我们可以在不影响其他类的情况下，给message变量赋值。-->
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:context="http://www.springframework.org/schema/context"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
 <!--启用注释-->
     <context:annotation-config/>
     <!--    first-->
@@ -103,4 +103,53 @@
 <!--    annotation demo-->
 <!--    使用context命名空间，通知spring扫描指定目录，进行注解的解析-->
     <context:component-scan base-package="us.fjj.spring.learning"/>
+
+
+<!--    aop demo-->
+<!--    用于注解扫描-->
+    <context:component-scan base-package="us.fjj.spring.learning.aopdemo"/>
+<!--    使切面开启自动代理-->
+    <aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+<!--    AOP编程-->
+        <aop:config>
+            <aop:aspect ref="myAspect">
+<!--                配置切入点，通知最后增强哪些方法-->
+<!--                Spring AOP表达式的写法：-->
+
+<!--                任意公共方法的执行：-->
+<!--                execution(public * *(..))-->
+<!--                ##public可以省略, 第一个* 代表方法的任意返回值 第二个参数代表任意包+类+方法 （..）表示任意参数-->
+
+<!--                任何一个以“get”开始的方法的执行：-->
+<!--                execution(* get*(..))-->
+
+<!--                UserService接口的任意方法：-->
+<!--                execution(* com.einblatt.service.UserService.*(..))-->
+
+<!--                定义在com.einblatt.service包里的任意方法的执行：-->
+<!--                execution(* com.einblatt.service.*.*(..))-->
+<!--                #第一个 .* 代表任意类, 第二个 .* 代表任意方法-->
+
+<!--                定义在service包和所有子包里的任意类的任意方法的执行：-->
+<!--                execution(* com.einblatt.service..*.*(..))-->
+<!--                # ..* 代表任意包或者子包-->
+
+<!--                定义在com.einblatt包和所有子包里的UserService类的任意方法的执行：-->
+<!--                execution(* com.einblatt..UserService.*(..))-->
+
+                <aop:pointcut expression="execution (* us.fjj.spring.learning.aopdemo.*.* (..))" id="myPointCut"/>
+<!--                前置通知，关联通知Advice和切入点PointCut-->
+                <aop:before method="myBefore" pointcut-ref="myPointCut"/>
+<!--                后置通知，在方法返回之后执行，就可以获得返回值returning属性-->
+                <aop:after-returning method="myAfterReturning" pointcut-ref="myPointCut" returning="returnVal"/>
+<!--                环绕通知-->
+                <aop:around method="myAround" pointcut-ref="myPointCut"/>
+<!--                抛出通知：用于处理程序发生异常，可以接收当前方法产生的异常-->
+<!--                *注意：如果程序没有异常，则不会执行增强-->
+<!--                *throwing属性: 用于设置通知第二个参数的名称，类型Throwable-->
+                <aop:after-throwing method="myAfterThrowing" pointcut-ref="myPointCut" throwing="e"/>
+<!--                最终通知：无论程序发生任何事情，都将执行-->
+                <aop:after method="myAfter" pointcut-ref="myPointCut"/>
+            </aop:aspect>
+        </aop:config>
 </beans>
