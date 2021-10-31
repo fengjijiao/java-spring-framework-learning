@@ -111,6 +111,7 @@
 <!--    使切面开启自动代理-->
     <aop:aspectj-autoproxy></aop:aspectj-autoproxy>
 <!--    AOP编程-->
+<!--    基于XML的声明式：通过Spring配置文件的方式来定义切面、切入点及通知。所有的切面和通知都必须定义在<aop:config>元素中。-->
         <aop:config>
             <aop:aspect ref="myAspect">
 <!--                配置切入点，通知最后增强哪些方法-->
@@ -152,4 +153,31 @@
                 <aop:after method="myAfter" pointcut-ref="myPointCut"/>
             </aop:aspect>
         </aop:config>
+    <!--            aspectj基于注解-->
+    <bean id="man3" class="us.fjj.spring.learning.aspectjannotationdemo.Man">
+        <property name="name" value="zhangsan"/>
+        <property name="age" value="12"/>
+    </bean>
+    <bean id="logging" class="us.fjj.spring.learning.aspectjannotationdemo.Logging"/>
+
+<!--    sqlite数据库配置-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+<!--        数据库驱动-->
+        <property name="driverClassName" value="org.sqlite.SQLiteJDBCLoader"/>
+<!--        连接数据库的url-->
+        <property name="url" value="jdbc:sqlite:demo.db"/>
+<!--        连接数据库用户名-->
+<!--        <property name="username" value="root"/>-->
+<!--        连接数据库密码-->
+<!--        <property name="password" value="password"/>-->
+    </bean>
+<!--    配置JDBC模板-->
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+<!--        默认必须使用数据源-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+<!--    配置注入类-->
+    <bean id="userDao2" class="us.fjj.spring.learning.jdbctemplatedemo.UserDaoImpl">
+        <property name="jdbcTemplate" ref="jdbcTemplate"/>
+    </bean>
 </beans>

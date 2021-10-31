@@ -1,11 +1,16 @@
 package us.fjj.spring.learning;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import us.fjj.spring.learning.annotationdemo.UserController;
 import us.fjj.spring.learning.aopdemo.CustomerDaoImpl;
 
+import java.util.List;
+
 public class MainApp {
+    static Logger log = LogManager.getLogger(MainApp.class.getName());
     public static void main(String[] args) {
         ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");//该类用于加载Spring配置文件、创建和初始化所有对象，也就是下面配置文件中提到的bean。
         //first start
@@ -93,5 +98,72 @@ public class MainApp {
         //环绕结束
         //后置通知，返回值：null
         //op demo end
+
+        //aspectj基于注解 start
+        us.fjj.spring.learning.aspectjannotationdemo.Man man3 = (us.fjj.spring.learning.aspectjannotationdemo.Man) context.getBean("man3");
+        man3.getName();
+        man3.getAge();
+        //man3.throwException();
+        /**
+         * 前置通知
+         * 后置通知
+         * 返回值为：zhangsan
+         * 前置通知
+         * 后置通知
+         * 返回值为：12
+         * 前置通知
+         * 抛出异常
+         * 后置通知
+         * 这里的异常为：java.lang.IllegalArgumentException
+         * Exception in thread "main" java.lang.IllegalArgumentException
+         * 	at us.fjj.spring.learning.aspectjannotationdemo.Man.throwException(Man.java:25)
+         * 	at us.fjj.spring.learning.aspectjannotationdemo.Man$$FastClassBySpringCGLIB$$e5341b09.invoke(<generated>)
+         * 	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:218)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:769)
+         * 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+         * 	at org.springframework.aop.framework.adapter.MethodBeforeAdviceInterceptor.invoke(MethodBeforeAdviceInterceptor.java:56)
+         * 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:186)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+         * 	at org.springframework.aop.aspectj.AspectJAfterAdvice.invoke(AspectJAfterAdvice.java:47)
+         * 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:186)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+         * 	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:55)
+         * 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:186)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+         * 	at org.springframework.aop.aspectj.AspectJAfterThrowingAdvice.invoke(AspectJAfterThrowingAdvice.java:62)
+         * 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:186)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+         * 	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:95)
+         * 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:186)
+         * 	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+         * 	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:689)
+         * 	at us.fjj.spring.learning.aspectjannotationdemo.Man$$EnhancerBySpringCGLIB$$bfe37e9d.throwException(<generated>)
+         * 	at us.fjj.spring.learning.MainApp.main(MainApp.java:101)
+         */
+        //aspectj基于注解 end
+        System.out.println("ok");
+
+        //jdbcTemplate start
+        us.fjj.spring.learning.jdbctemplatedemo.UserDao userDao2 = (us.fjj.spring.learning.jdbctemplatedemo.UserDao) context.getBean("userDao2");
+        userDao2.createUserTable();
+        userDao2.saveUser(new us.fjj.spring.learning.jdbctemplatedemo.User("laokai", 3));
+        userDao2.saveUser(new us.fjj.spring.learning.jdbctemplatedemo.User("baidu", 18));
+        List<us.fjj.spring.learning.jdbctemplatedemo.User> users = userDao2.listUser();
+        for (us.fjj.spring.learning.jdbctemplatedemo.User u:
+             users) {
+            System.out.println("name:"+u.getName()+",age:"+u.getAge());
+        }
+        /**
+         * name:laokai,age:3
+         * name:baidu,age:18
+         */
+        //jdbcTemplate end
+
+        //log4j的使用 start
+//        static Logger log = LogManager.getLogger(MainApp.class.getName());
+        //top
+        log.info("this is a info log.");
+        //log4j的使用 end
     }
 }
