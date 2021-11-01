@@ -6,6 +6,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import us.fjj.spring.learning.annotationdemo.UserController;
 import us.fjj.spring.learning.aopdemo.CustomerDaoImpl;
+import us.fjj.spring.learning.programmingtransactionmanagement.User;
 
 import java.util.List;
 
@@ -146,9 +147,10 @@ public class MainApp {
 
         //jdbcTemplate start
         us.fjj.spring.learning.jdbctemplatedemo.UserDao userDao2 = (us.fjj.spring.learning.jdbctemplatedemo.UserDao) context.getBean("userDao2");
-        userDao2.createUserTable();
-        userDao2.saveUser(new us.fjj.spring.learning.jdbctemplatedemo.User("laokai", 3));
-        userDao2.saveUser(new us.fjj.spring.learning.jdbctemplatedemo.User("baidu", 18));
+        //userDao2.createUserTable();
+        //running only one
+        //userDao2.saveUser(new us.fjj.spring.learning.jdbctemplatedemo.User("laokai", 3));
+        //userDao2.saveUser(new us.fjj.spring.learning.jdbctemplatedemo.User("baidu", 18));
         List<us.fjj.spring.learning.jdbctemplatedemo.User> users = userDao2.listUser();
         for (us.fjj.spring.learning.jdbctemplatedemo.User u:
              users) {
@@ -165,5 +167,52 @@ public class MainApp {
         //top
         log.info("this is a info log.");
         //log4j的使用 end
+
+        //编程式事务管理 start
+        us.fjj.spring.learning.programmingtransactionmanagement.UserDao userDao3 = (us.fjj.spring.learning.programmingtransactionmanagement.UserDao) context.getBean("userDao3");
+//        userDao3.createUserTable();
+//        userDao3.saveUser(new us.fjj.spring.learning.programmingtransactionmanagement.User("changzan",12));
+//        userDao3.saveUser(new us.fjj.spring.learning.programmingtransactionmanagement.User("lisi",16));
+        List<us.fjj.spring.learning.programmingtransactionmanagement.User> users2 = userDao3.listUser();
+        for (us.fjj.spring.learning.programmingtransactionmanagement.User u:
+                users2) {
+            System.out.println("name:"+u.getName()+",age:"+u.getAge());
+        }
+        /**
+         *name:laokai,age:3
+         * name:baidu,age:18
+         * commit!
+         * commit!
+         * name:changzan,age:12
+         * name:lisi,age:16
+         */
+        //编程式事务管理 end
+
+        //xml声明式事务管理 start
+        us.fjj.spring.learning.xmldeclarativetransactionmanagement.UserDao userDao4 = (us.fjj.spring.learning.xmldeclarativetransactionmanagement.UserDao) context.getBean("userDao4");
+//        userDao4.createUserTable();
+//        userDao4.saveUser(new us.fjj.spring.learning.xmldeclarativetransactionmanagement.User("changzan",12));
+//        userDao4.saveUser(new us.fjj.spring.learning.xmldeclarativetransactionmanagement.User("lisi",16));
+        List<us.fjj.spring.learning.xmldeclarativetransactionmanagement.User> users4 = userDao4.listUser();
+        for (us.fjj.spring.learning.xmldeclarativetransactionmanagement.User u:
+                users4) {
+            System.out.println("name:"+u.getName()+",age:"+u.getAge());
+        }
+        //xml声明式事务管理 end
+
+        //注解声明式事务管理 start
+        us.fjj.spring.learning.annotationdeclarativetransactionmanagement.UserDao userDao5 = (us.fjj.spring.learning.annotationdeclarativetransactionmanagement.UserDao) context.getBean("userDao5");
+//        userDao5.createUserTable();
+//        userDao5.saveUser(new us.fjj.spring.learning.annotationdeclarativetransactionmanagement.User("changzan",12));
+//        userDao5.saveUser(new us.fjj.spring.learning.annotationdeclarativetransactionmanagement.User("lisi",16));
+        List<us.fjj.spring.learning.annotationdeclarativetransactionmanagement.User> users5 = userDao5.listUser();
+        for (us.fjj.spring.learning.annotationdeclarativetransactionmanagement.User u:
+                users5) {
+            System.out.println("name:"+u.getName()+",age:"+u.getAge());
+        }
+        /**
+         *
+         */
+        //注解声明式事务管理 end
     }
 }

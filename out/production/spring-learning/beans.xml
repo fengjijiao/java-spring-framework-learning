@@ -2,8 +2,10 @@
 <!--beans.xml用于给不同的bean分配唯一的ID，并给相应的bean属性赋值。例如，我们可以在不影响其他类的情况下，给message变量赋值。-->
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx https://www.springframework.org/schema/aop/spring-tx.xsd">
 <!--启用注释-->
     <context:annotation-config/>
     <!--    first-->
@@ -180,4 +182,43 @@
     <bean id="userDao2" class="us.fjj.spring.learning.jdbctemplatedemo.UserDaoImpl">
         <property name="jdbcTemplate" ref="jdbcTemplate"/>
     </bean>
+
+<!--    编程式事务管理-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <bean id="userDao3" class="us.fjj.spring.learning.programmingtransactionmanagement.UserDaoImpl">
+        <property name="jdbcTemplate" ref="jdbcTemplate"/>
+        <property name="transactionManager" ref="transactionManager"/>
+    </bean>
+
+<!--    xml声明式事务管理-->
+
+<!--    编写通知：对事务进行增强（通知），需要编写切入点和具体执行事务的细节-->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+<!--            给切入点方法添加事务详情，name表示方法名称，*表示任意方法名称，propagation用于设置传播行为，read-only表示隔离级别，是否只读。-->
+            <tx:method name="saveUser"/><!--propagation="SUPPORTS" read-only="false"-->
+        </tx:attributes>
+    </tx:advice>
+<!--    aop编写，让spring自动对目标生成代理，需要使用AspectJ的表达式-->
+    <aop:config>
+<!--        切入点，execution定义的表达式.*.*表示us.fjj.spring.learning.xmldeclarativetransactionmanagement下的所有类所有方法都应用该事务-->
+        <aop:pointcut id="createOperation" expression="execution (* us.fjj.spring.learning.xmldeclarativetransactionmanagement.UserDao.saveUser(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="createOperation"/>
+    </aop:config>
+<!--    bean id="transactionManager-->
+    <bean id="userDao4" class="us.fjj.spring.learning.xmldeclarativetransactionmanagement.UserDaoImpl">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="jdbcTemplate" ref="jdbcTemplate"/>
+    </bean>
+
+<!--    注解声明事件管理-->
+    <bean id="userDao5" class="us.fjj.spring.learning.annotationdeclarativetransactionmanagement.UserDaoImpl">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="jdbcTemplate" ref="jdbcTemplate"/>
+    </bean>
+
+<!--    注册事务管理驱动-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
 </beans>
