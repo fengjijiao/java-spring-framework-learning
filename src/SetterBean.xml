@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd">
+    <bean id="serviceA" class="us.fjj.spring.learning.bean.SetterBean$ServiceA"/>
+    <bean id="serviceB" class="us.fjj.spring.learning.bean.SetterBean$ServiceB" autowire-candidate="false"/>
+    <bean id="setterBean" class="us.fjj.spring.learning.bean.SetterBean" autowire="byType"/>
+</beans>
