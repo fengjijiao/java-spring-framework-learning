@@ -26,4 +26,10 @@ public class UseAnnotation9<@Ann9("用在了类变量类型V1上") @Ann9_1(1) V1
     public String m1(@Ann9("用在了参数上") @Ann9_1(8) String name) {
         return null;
     }
+
+    @Ann9("用在了返回值上")
+    @Ann9_1(10)
+    private String m2(@Ann9("用在了参数上") @Ann9_1(11) String name) {
+        return null;
+    }
 }

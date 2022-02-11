@@ -6,7 +6,7 @@ import java.lang.reflect.*;
 import java.util.Arrays;
 
 public class AnnotationUsageTest {
-    public static void main(String[] args) throws NoSuchFieldException {
+    public static void main(String[] args) throws NoSuchFieldException, NoSuchMethodException {
         //ann9&ann9_1
 
         //解析类上的注解
@@ -105,6 +105,101 @@ public class AnnotationUsageTest {
          * java.lang.Integer类型上的注解如下：
          * @us.fjj.spring.learning.annotationusage.Ann9("\u7528\u5728\u4e86\u6cdb\u578b\u7c7b\u578b\u4e0a\uff0cInteger")
          * @us.fjj.spring.learning.annotationusage.Ann9_1(5)
+         */
+
+        //解析构造函数上的注解
+//        Constructor<?> constructor = UseAnnotation9.class.getConstructors()[0];
+        Constructor<?> constructor = UseAnnotation9.class.getConstructor(String.class);
+        //以上两行等价
+        for (Annotation annotation:
+                constructor.getAnnotations()) {
+            System.out.println(annotation);
+        }
+        /**
+         * @us.fjj.spring.learning.annotationusage.Ann9("\u7528\u5728\u4e86\u6784\u9020\u65b9\u6cd5\u4e0a")
+         * @us.fjj.spring.learning.annotationusage.Ann9_1(6)
+         */
+
+        //解析m1方法上的注解
+        Method method = UseAnnotation9.class.getDeclaredMethod("m2", String.class);
+        for (Annotation annotation:
+                method.getAnnotations()) {
+            System.out.println(annotation);
+        }
+        Method method1 = UseAnnotation9.class.getMethod("m1", String.class);
+        for (Annotation annotation:
+                method1.getAnnotations()) {
+            System.out.println(annotation);
+        }
+        /**
+         * @us.fjj.spring.learning.annotationusage.Ann9("\u7528\u5728\u4e86\u8fd4\u56de\u503c\u4e0a")
+         * @us.fjj.spring.learning.annotationusage.Ann9_1(10)
+         * @us.fjj.spring.learning.annotationusage.Ann9("\u7528\u5728\u4e86\u8fd4\u56de\u503c\u4e0a")
+         * @us.fjj.spring.learning.annotationusage.Ann9_1(7)
+         */
+        /**
+         * 注意：getDeclaredMethod可get所有修饰符的方法而getMethod只能get public的方法
+         */
+
+        //获取m1方法参数上的注解
+        Method method2 = UseAnnotation9.class.getMethod("m1", String.class);
+        for (Parameter parameter:
+                method2.getParameters()) {
+            System.out.println("参数"+parameter.getName()+"的注解为：");
+            for (Annotation annotation:
+                 parameter.getAnnotations()) {
+                System.out.println(annotation);
+            }
+        }
+        /**
+         * 参数arg0的注解为：
+         * @us.fjj.spring.learning.annotationusage.Ann9("\u7528\u5728\u4e86\u53c2\u6570\u4e0a")
+         * @us.fjj.spring.learning.annotationusage.Ann9_1(8)
+         */
+        /**
+         * 上面的参数名称为arg0，如果想要让参数名称和源码中真实名称一致，操作如下：
+         * 如果编译这个class的时候没有添加参数-parameters，运行的时候你会得到这个结果：
+         * Parameter: arg0
+         * 编译的时候添加了-parameters参数的话，运行结果会不一样：
+         * Parameter：name
+         * 对于有经验的Maven使用者，-parameters参数可以添加到maven-compiler-plugin的配置部分：
+         * <plugin>
+         *     <groupId>org.apache.maven.plugins</groupId>
+         *     <artifactId>maven-compiler-plugin</artifactId>
+         *     <version>3.1</version>
+         *     <configuration>
+         *         <compilerArgument>-parameters</compilerArgument>
+         *         <source>1.8</source>
+         *         <target>1.8</target>
+         *     </configuration>
+         * </plugin>
+         */
+        //参见  https://github.com/fengjijiao/java-annotation-learning/blob/main/src/test/java/us/fjj/learning/annotation/UseAnnotation9Test.java
+
+        //@Inherited注解
+        for (Annotation annotation:
+                UseInheritedAnnotation.C2.class.getAnnotations()) {
+            System.out.println(annotation);
+        }
+        /**
+         * 在没有在A1、A2上添加@Inherited注解时，C2类上没有注解
+         * 添加后的结果如下：
+         * @us.fjj.learning.annotation.UseInheritedAnnotation$A2("i am in class.")
+         */
+
+
+        //@Repeatable注解
+        for (Annotation annotation :
+                UseRepeatableAnnotation.C1.class.getAnnotations()) {
+            System.out.println(annotation);
+        }
+        for (Annotation annotation :
+                UseRepeatableAnnotation.C1.class.getDeclaredField("v1").getAnnotations()) {
+            System.out.println(annotation);
+        }
+        /**
+         * @us.fjj.learning.annotation.UseRepeatableAnnotation$Ann10s({@us.fjj.learning.annotation.UseRepeatableAnnotation$Ann10("ps 1"), @us.fjj.learning.annotation.UseRepeatableAnnotation$Ann10("ps 2")})
+         * @us.fjj.learning.annotation.UseRepeatableAnnotation$Ann10s({@us.fjj.learning.annotation.UseRepeatableAnnotation$Ann10("v ps 1"), @us.fjj.learning.annotation.UseRepeatableAnnotation$Ann10("v ps 2")})
          */
     }
 }
