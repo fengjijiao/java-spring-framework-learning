@@ -5,6 +5,11 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import us.fjj.spring.learning.importannotationusage.test1.MainConfig1;
 import us.fjj.spring.learning.importannotationusage.test2.MainConfig2;
 import us.fjj.spring.learning.importannotationusage.test3.MainConfig3;
+import us.fjj.spring.learning.importannotationusage.test4.MainConfig4;
+import us.fjj.spring.learning.importannotationusage.test5.MainConfig5;
+import us.fjj.spring.learning.importannotationusage.test6.MainConfig6;
+import us.fjj.spring.learning.importannotationusage.test7.MainConfig7;
+import us.fjj.spring.learning.importannotationusage.test8.MainConfig8;
 
 /**
  * @Import 出现的背景
@@ -79,9 +84,9 @@ public class ImportAnnotationTest {
     }
 
     //value为@Configuration标注的配置类
+
     /**
      * 项目比较大的情况下，会按照模块独立开发，每个模块在maven中就表现为一个个的构建，然后通过坐标的方式进行引入需要的模块。
-     *
      */
     @Test
     public void test2() {
@@ -105,6 +110,7 @@ public class ImportAnnotationTest {
     }
 
     //value为@ComponentScan标注的类
+
     /**
      * 项目中分为多个模块，每个模块有各自独立的包，我们在每个模块所在的包中配置一个@ComponentScan类，然后通过@Import来导入需要启动的模块。
      */
@@ -130,4 +136,163 @@ public class ImportAnnotationTest {
          * us.fjj.spring.learning.importannotationusage.test3.module2.ComponentScanModule2->us.fjj.spring.learning.importannotationusage.test3.module2.ComponentScanModule2@1cbf6e72
          */
     }
+
+
+    /**
+     * value为ImportBeanDefinitionRegistrar接口类型 用法
+     * 1.定义ImportBeanDefinitionRegistrar接口实现类，在registerBeanDefinitions方法中使用registry来注册bean
+     * 2.使用@Import来导入步骤1中定义的类
+     * 3.使用步骤2中@Import标注的类作为AnnotationConfigApplicationContext构造参数创建spring容器
+     * 4.使用AnnotationConfigApplicationContext操作bean
+     */
+    @Test
+    public void test4() {
+        //1.通过AnnotationConfigApplicationContext创建Spring容器，参数为@Import标注的类
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig4.class);
+        //2.输出容器中定义的所有bean信息
+        for (String beanName :
+                context.getBeanDefinitionNames()) {
+            System.out.println(String.format("%s->%s", beanName, context.getBean(beanName)));
+        }
+        /**
+         * org.springframework.context.annotation.internalConfigurationAnnotationProcessor->org.springframework.context.annotation.ConfigurationClassPostProcessor@78fbff54
+         * org.springframework.context.annotation.internalAutowiredAnnotationProcessor->org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor@3e10dc6
+         * org.springframework.context.annotation.internalCommonAnnotationProcessor->org.springframework.context.annotation.CommonAnnotationBeanPostProcessor@7e22550a
+         * org.springframework.context.event.internalEventListenerProcessor->org.springframework.context.event.EventListenerMethodProcessor@45e37a7e
+         * org.springframework.context.event.internalEventListenerFactory->org.springframework.context.event.DefaultEventListenerFactory@62452cc9
+         * mainConfig4->us.fjj.spring.learning.importannotationusage.test4.MainConfig4@6941827a
+         * service1->us.fjj.spring.learning.importannotationusage.test4.Service1@5a7005d
+         * service2->Service2{service1=us.fjj.spring.learning.importannotationusage.test4.Service1@5a7005d}
+         */
+    }
+
+    //value为ImportSelector接口类型
+
+    /**
+     * 用法
+     * 1.定义ImportSelector接口实现类，在selectImports返回需要导入的类的名称数组
+     * 2.使用@Import来导入步骤1中定义的类
+     * 3.使用步骤2中@Import标注的类作为AnnotationConfigApplicationContext构造参数创建spring容器
+     * 4.使用AnnotationConfigApplicationContext操作bean
+     */
+    @Test
+    public void test5() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig5.class);
+        for (String beanName :
+                context.getBeanDefinitionNames()) {
+            System.out.println(String.format("%s->%s", beanName, context.getBean(beanName)));
+        }
+        /**
+         * org.springframework.context.annotation.internalConfigurationAnnotationProcessor->org.springframework.context.annotation.ConfigurationClassPostProcessor@6d0b5baf
+         * org.springframework.context.annotation.internalAutowiredAnnotationProcessor->org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor@631e06ab
+         * org.springframework.context.annotation.internalCommonAnnotationProcessor->org.springframework.context.annotation.CommonAnnotationBeanPostProcessor@2a3591c5
+         * org.springframework.context.event.internalEventListenerProcessor->org.springframework.context.event.EventListenerMethodProcessor@34a75079
+         * org.springframework.context.event.internalEventListenerFactory->org.springframework.context.event.DefaultEventListenerFactory@346a361
+         * mainConfig5->us.fjj.spring.learning.importannotationusage.test5.MainConfig5@107ed6fc
+         * us.fjj.spring.learning.importannotationusage.test5.Service1->us.fjj.spring.learning.importannotationusage.test5.Service1@1643d68f
+         * us.fjj.spring.learning.importannotationusage.test5.Module1Config->us.fjj.spring.learning.importannotationusage.test5.Module1Config$$EnhancerBySpringCGLIB$$9f67fb5f@186978a6
+         * m1->fjj
+         * m2->wq
+         */
+    }
+
+    /**
+     * 案例一：
+     * 需求：凡是类名中包含service的，调用他们的内部任何方法，调用之后能够输出这些方法的耗时。（通常使用代理实现）
+     * <p>
+     * 实现代理：MainConfig6-->@EnableMethodCostTime-->MethodCostTimeProxyImportSelector-->MethodCostTimeProxyBeanPostProcessor
+     * 在MainConfig6文件中有包含@ComponentScan注解，表示向spring容器中注入同等包名及子包下的对象（默认过滤器），即这些对象会执行MethodCostTimeProxyBeanPostProcessor中的操作。
+     */
+    @Test
+    public void test6() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig6.class);
+        us.fjj.spring.learning.importannotationusage.test6.Service1 service1 = context.getBean(us.fjj.spring.learning.importannotationusage.test6.Service1.class);
+        us.fjj.spring.learning.importannotationusage.test6.Service2 service2 = context.getBean(us.fjj.spring.learning.importannotationusage.test6.Service2.class);
+        us.fjj.spring.learning.importannotationusage.test6.Ncp3 ncp3 = context.getBean(us.fjj.spring.learning.importannotationusage.test6.Ncp3.class);
+        service1.m1();
+        service2.m1();
+        ncp3.m1();
+        /**
+         *这是Service1的方法m1！
+         * 执行m1耗时16481300ns
+         * 这是Service2的方法m1！
+         * 执行m1耗时7970200ns
+         * class us.fjj.spring.learning.importannotationusage.test6.Ncp3.m1()
+         *
+         * 可以看到Ncp3没有进行耗时统计，而Service1和Service2均有。
+         */
+        /**
+         * 如果像关闭方法耗时统计，只需要将MainConfig6上的@EnableMethodCostTime注解去除即可
+         * spring中有很多类似的注解,以@EnableXXX开头的注解，基本上都是通过上面这种方式实现的，如：
+         * @EnableAspectJAutoProxy
+         * @EnableCaching
+         * @EnableAsync
+         */
+    }
+
+    /**
+     * DeferredImportSelector接口
+     * spring中的核心功能@EnableAutoConfiguration就是靠@DeferredImportSelector来实现的。
+     *
+     * DeferredImportSelector是ImportSelector的子接口，所以也可以通过@import进行导入，这个接口和ImportSelector不同的地方有两个：
+     * 1.延迟导入
+     * 2.指定导入的类的处理顺序
+     *
+     */
+    //延迟导入
+    /**
+     * 比如@Import的value包含了多个普通类、多个@Configuration标注的配置类、多个ImportSelector接口实现类、多个ImportBeanDefinitionRegistrar接口的实现类，还有DeferredImportSelector接口实现类，
+     * 此时spring处理这些被导入的类的时候，
+     * 会将DeferredImportSelector类型的放在最后处理，会先处理其他被导入的类,其他类会按照value所在的前后顺序进行处理。
+     *
+     * 那么我们就可以因此做很多事情，比如可以在DeferredImportSelector导入的类中判断一下容器中是否已经注册了某个bean，如果没有注册过，那么再来注册。
+     *
+     * 另一个注解@Conditional，这个注解可以按条件来注册bean，比如可以判断某个bean不存在时才进行注册，某个类存在时才进行注册等等各种判断条件，通过
+     * @Conditional结合@DeferredImprotSelector可以做很多事情。
+     */
+    @Test
+    public void test7() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig7.class);
+        /**
+         * name2
+         * name1
+         * name3
+         *
+         * 输出的结果结合一下@import中被导入的3个类的顺序，可以看出DeferredImportSelector3是被最后处理的，其他2个是按照在value中所在的先后顺序处理的。
+         *
+         */
+    }
+
+    //指定导入的类的处理顺序
+    /**
+     * 当@import中有多个DeferredImportSelector接口的实现类时，可以指定他们的顺序，指定顺序常见2种方式
+     */
+    //1.实现Ordered接口的方式
+    //2.使用@Order注解
+    @Test
+    public void test8() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig8.class);
+        /**
+         * name1
+         * name3
+         * name2
+         */
+    }
+
+    /**
+     * 在spring中，@Import注解是被下面这个类处理的
+     * org.springframework.context.annotation.ConfigurationClassPostProcessor
+     * @Configuration、@Bean、@ComponentScan、@ComponentScans都是被这个类处理的，
+     */
+
+
+    /**
+     * 总结：
+     * 1.@Import可以用来批量导入任何普通注解、配置类，将这些类中定义的所有bean注册到容器中
+     * 2.@import常见的5种用法需要掌握
+     * 3.掌握ImportSelector、ImportBeanDefinitionRegistrar、DeferredImportSelector的用法
+     * 4.DeferredImportSelector接口可以实现延迟导入、按序导入的功能
+     * 5.spring中很多以@Enable开头的都是使用@Import结合ImportSelector的方式实现的
+     * 6.BeanDefinitionRegistrar接口：bean定义注册器
+     */
 }
