@@ -11,6 +11,7 @@ import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.*;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -18,6 +19,8 @@ import us.fjj.spring.learning.beanlifecycle.test1.Car;
 import us.fjj.spring.learning.beanlifecycle.test14.MySmartInstantiationAwareBeanPostProcessor;
 import us.fjj.spring.learning.beanlifecycle.test14.Person;
 import us.fjj.spring.learning.beanlifecycle.test15.UserModel;
+import us.fjj.spring.learning.beanlifecycle.test17.AwareBean;
+import us.fjj.spring.learning.beanlifecycle.test18.Bean1;
 import us.fjj.spring.learning.beanlifecycle.test3.User;
 import us.fjj.spring.learning.beanlifecycle.test5.CompositeObj;
 import us.fjj.spring.learning.beanlifecycle.test7.Service1;
@@ -970,4 +973,92 @@ public class BeanLifeCycleTest {
      * 循环处理PropertyValues中的属性值信息，通过反射调用set方法将属性的值设置到bean实例中。
      * PropertyValues中的值是通过bean xml中的property元素配置的，或者调用MutablePropertyValues中add方法设置的值。
      */
+
+
+    /**
+     * 阶段9：Bean初始化阶段
+     * 这个阶段分为5个小阶段
+     * 1.Bean Aware接口回调
+     * 2.Bean初始化前操作
+     * 3.Bean初始化操作
+     * 4.Bean初始化后操作
+     * 5.Bean初始化完成操作
+     */
+
+    /**
+     * Bean Aware接口回调
+     */
+    /**
+     * 案例17
+     */
+    @Test
+    public void test17() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        factory.registerBeanDefinition("awareBean", BeanDefinitionBuilder
+                .genericBeanDefinition(AwareBean.class)
+                .getBeanDefinition());
+        factory.getBean("awareBean");
+        /**
+         * setBeanName(awareBean)
+         * setBeanClassLoader(jdk.internal.loader.ClassLoaders$AppClassLoader@1d44bcfa)
+         * setBeanFactory(org.springframework.beans.factory.support.DefaultListableBeanFactory@48793bef: defining beans [awareBean]; root of factory hierarchy)
+         */
+    }
+
+    /**
+     * Bean初始化前操作
+     * 会调用BeanPostProcessor的postProcessBeforeInitialization方法，若返回null，当前方法将结束。
+     * 通常称postProcessBeforeInitialization这个方法为：bean初始化前操作。
+     *
+     * 这个接口有2个实现类：
+     * org.springframework.context.support.ApplicationContextAwareProcessor
+     * org.springframework.context.annotation.CommonAnnotationBeanPostProcessor
+     * 其中
+     * ApplicationContextAwareProcessor注入6个Aware接口对象
+     * 如果bean实现了下面的接口，在ApplicationContextAwareProcessor#postProcessBeforeInitialization中会依次调用下面接口中的方法，将Aware前缀对应的对象注入到bean实例中。
+     * EnvironmentAware: 注入Environment对象
+     * EmbeddedValueResolverAware: 注入EmbeddedValueResolver对象
+     * ResourceLoaderAware: 注入ResourceLoader对象
+     * ApplicationEventPublisherAware: 注入ApplicationEventPublisher对象
+     * MessageSourceAware: 注入MessageSource对象
+     * ApplicationContextAware: 注入ApplicationContext对象
+     *
+     * 从名称上可以看出这个类以ApplicationContext开头的，说明这个类只能在ApplicationContext环境中使用。
+     *
+     * CommonAnnotationBeanPostProcessor调用@PostConstruct标注的方法
+     * CommonAnnotationBeanPostProcessor#postProcessBeforeInitialization中会调用bean中所有标注@PostConstruct注解的方法
+     */
+    /**
+     * 案例18
+     */
+    @Test
+    public void test18() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.register(Bean1.class);
+        context.refresh();
+        /**
+         * setEnvironment:StandardEnvironment {activeProfiles=[], defaultProfiles=[default], propertySources=[PropertiesPropertySource {name='systemProperties'}, SystemEnvironmentPropertySource {name='systemEnvironment'}]}
+         * setEmbeddedValueResolver:org.springframework.beans.factory.config.EmbeddedValueResolver@3700ec9c
+         * setResourceLoader:org.springframework.context.annotation.AnnotationConfigApplicationContext@6986852, started on Wed Feb 16 02:02:05 PST 2022
+         * setApplicationEventPublisher:org.springframework.context.annotation.AnnotationConfigApplicationContext@6986852, started on Wed Feb 16 02:02:05 PST 2022
+         * setMessageSource:org.springframework.context.annotation.AnnotationConfigApplicationContext@6986852, started on Wed Feb 16 02:02:05 PST 2022
+         * setApplicationContext:org.springframework.context.annotation.AnnotationConfigApplicationContext@6986852, started on Wed Feb 16 02:02:05 PST 2022
+         * postConstruct2()
+         * postConstruct1()
+         */
+        /**
+         * 在AnnotationConfigApplicationContext源码中，内部会添加很多BeanPostProcessor到DefaultListableBeanFactory中.
+         */
+
+        /**
+         * Bean初始化阶段
+         *
+         * 2个步骤
+         * 1.调用InitializingBean接口的afterPropertiesSet方法
+         * 2.调用定义bean的时候指定的初始化方法
+         */
+        /**
+         *
+         */
+    }
 }
