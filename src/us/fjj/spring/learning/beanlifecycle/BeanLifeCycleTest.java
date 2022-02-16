@@ -1,8 +1,12 @@
 package us.fjj.spring.learning.beanlifecycle;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.*;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
@@ -11,6 +15,9 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import us.fjj.spring.learning.beanlifecycle.test1.Car;
+import us.fjj.spring.learning.beanlifecycle.test14.MySmartInstantiationAwareBeanPostProcessor;
+import us.fjj.spring.learning.beanlifecycle.test14.Person;
+import us.fjj.spring.learning.beanlifecycle.test15.UserModel;
 import us.fjj.spring.learning.beanlifecycle.test3.User;
 import us.fjj.spring.learning.beanlifecycle.test5.CompositeObj;
 import us.fjj.spring.learning.beanlifecycle.test7.Service1;
@@ -612,5 +619,355 @@ public class BeanLifeCycleTest {
      * 阶段3：Spring Bean注册阶段
      * bean注册阶段需要用到一个非常重要的接口：BeanDefinitionRegistry
      *
+     */
+    /**
+     * BeanDefinitionRegistry唯一实现：DefaultListableBeanFactory
+     * spring中BeanDefinitionRegistry接口有一个唯一的实现类：
+     * org.springframework.beans.factory.support.DefaultListableBeanFactory
+     * 大家可能看到了很多类也实现了BeanDefinitionRegistry接口，比如我们经常使用到的AnnotationConfigApplicationContext，但实际上
+     * 其内部是转发给了DefaultListableBeanFactory进行处理的，所以真正实现这个接口的类是DefaultListableBeanFactory。
+     */
+    /**
+     * 案例11: BeanDefinitionRegistry 案例
+     */
+    @Test
+    public void test11() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+
+        //定义一个bean
+        GenericBeanDefinition nameBdf = new GenericBeanDefinition();
+        nameBdf.setBeanClass(String.class);
+        nameBdf.getConstructorArgumentValues().addIndexedArgumentValue(0, "JYX");
+
+        //将bean注册到容器中
+        factory.registerBeanDefinition("name", nameBdf);
+
+        //通过名称获取BeanDefinition
+        System.out.println(factory.getBeanDefinition("name"));
+        //通过名称判断是否注册过BeanDefinition
+        System.out.println(factory.containsBeanDefinition("name"));
+        //获取所有注册的名称
+        System.out.println(Arrays.asList(factory.getBeanDefinitionNames()));
+        //判断指定的name是否使用过
+        System.out.println(factory.isBeanNameInUse("name"));
+
+        //别名相关方法
+        //为name注册2个别名
+        factory.registerAlias("name", "alias-name-1");
+        factory.registerAlias("name", "alias-name-2");
+        //判断alias-name-1是否已被作为别名使用
+        System.out.println(factory.isAlias("alias-name-1"));
+        //通过名称获取对应的所有别名
+        System.out.println(Arrays.asList(factory.getAliases("name")));
+
+        //最后我们再获取一下这个bean
+        System.out.println(factory.getBean("name"));
+
+        /**
+         * Generic bean: class [java.lang.String]; scope=; abstract=false; lazyInit=null; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null
+         * true
+         * [name]
+         * true
+         * true
+         * [alias-name-2, alias-name-1]
+         * JYX
+         */
+    }
+    /**
+     * 阶段4到阶段14（从BeanDefinition合并阶段到Bean初始化完成阶段）都是在调用getBean从容器中获取bean对象的过程中发送的操作，需要仔细看。
+     */
+    /**
+     * 阶段4：BeanDefinition合并阶段
+     * <p>
+     * 合并阶段：有时我们定义bean的时候有父子bean关系，此时子BeanDefinition中的信息是不完整的，比如设置属性的时候配置在父BeanDefinition中，此时子BeanDefinition中是没有这些信息的，需要将子bean的BeanDefinition和父bean的BeanDefinition进行合并,
+     * 得到最终的一个RootBeanDefinition，合并之后得到的RootBeanDefinition包含bean定义的所有信息，包含了从父bean中继承过来的所有信息，后续bean的所有创建工作就是依靠合并之后BeanDefinition来进行的.
+     * bean定义可能存在多级父子关系，合并的时候进行递归合并，最终得到一个包含完整信息的RootBeanDefinition。
+     */
+    @Test
+    public void test12() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        XmlBeanDefinitionReader xmlBeanDefinitionReader = new XmlBeanDefinitionReader(factory);
+        xmlBeanDefinitionReader.loadBeanDefinitions("classpath:/us/fjj/spring/learning/beanlifecycle/test12/beans.xml");
+        for (String beanName :
+                factory.getBeanDefinitionNames()) {
+            BeanDefinition beanDefinition = factory.getBeanDefinition(beanName);
+            BeanDefinition mergedBeanDefinition = factory.getMergedBeanDefinition(beanName);
+            String beanDefinitionClassName = beanDefinition.getClass().getName();
+            Object bean = factory.getBean(beanName);
+            System.out.println(beanName + ":");
+            System.out.println("    beanDefinitionClassName: " + beanDefinitionClassName);
+            System.out.println("    beanDefinition: " + beanDefinition);
+            System.out.println("    mergedBeanDefinition: " + mergedBeanDefinition);
+            System.out.println("    bean: " + bean);
+        }
+//        /**
+//         * lesson1:
+//         *     beanDefinitionClassName: org.springframework.beans.factory.support.GenericBeanDefinition
+//         *     beanDefinition: Generic bean: class [us.fjj.spring.learning.beanlifecycle.test12.LessonModel]; scope=; abstract=false; lazyInit=false; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in class path resource [us/fjj/spring/learning/beanlifecycle/test12/beans.xml]
+//         *     mergedBeanDefinition: Root bean: class [us.fjj.spring.learning.beanlifecycle.test12.LessonModel]; scope=singleton; abstract=false; lazyInit=false; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in class path resource [us/fjj/spring/learning/beanlifecycle/test12/beans.xml]
+//         *     bean: LessonModel{name='论如何锤爆想和', lessonCount=100, description='作者：老K'}
+//         * lesson2:
+//         *     beanDefinitionClassName: org.springframework.beans.factory.support.GenericBeanDefinition
+//         *     beanDefinition: Generic bean with parent 'lesson1': class [null]; scope=; abstract=false; lazyInit=false; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in class path resource [us/fjj/spring/learning/beanlifecycle/test12/beans.xml]
+//         *     mergedBeanDefinition: Root bean: class [us.fjj.spring.learning.beanlifecycle.test12.LessonModel]; scope=singleton; abstract=false; lazyInit=false; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in class path resource [us/fjj/spring/learning/beanlifecycle/test12/beans.xml]
+//         *     bean: LessonModel{name='打爆老凯', lessonCount=100, description='作者：老K'}
+//         * lesson3:
+//         *     beanDefinitionClassName: org.springframework.beans.factory.support.GenericBeanDefinition
+//         *     beanDefinition: Generic bean with parent 'lesson2': class [null]; scope=; abstract=false; lazyInit=false; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in class path resource [us/fjj/spring/learning/beanlifecycle/test12/beans.xml]
+//         *     mergedBeanDefinition: Root bean: class [us.fjj.spring.learning.beanlifecycle.test12.LessonModel]; scope=singleton; abstract=false; lazyInit=false; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in class path resource [us/fjj/spring/learning/beanlifecycle/test12/beans.xml]
+//         *     bean: LessonModel{name='打爆老凯', lessonCount=99, description='作者：老K'}
+//         *
+//         */
+//        /**
+//         * 从输出中可以看到，合并之前，BeanDefinition是不完整的，比如lesson2和lesson3中的class是null，属性信息也不完整，但是在合并之后这些信息就都完整了。
+//         * 合并之前是GenericBeanDefinition类型，合并之后得到的是RootBeanDefinition类型的。
+//         * 获取lesson3合并的BeanDefinition时，内部会递归进行合并，先将lesson1和lesson2合并，然后将lesson2在和lesson3合并，最后得到合并之后的BeanDefinition。
+//         * 后面的阶段将使用合并产生的RootBeanDefinition。
+//         * /
+//
+    }
+//        /**
+//         * 阶段5: Bean Class加载阶段
+//         * 将bean的class名称转换为class类型的对象
+//         * BeanDefinition中有个Object类型的字段：beanClass
+//         *        private volatile Object beanClass;
+//         * 用来表示bean的class对象，通常这个字段的值有2种类型，一种是bean对应的Class类型的对象，另一种是bean对应的Class的完整类名，第一种情况不需要解析，第二种情况：即这个字段是bean的类名的时候，就需要通过类加载器将其转换为一个Class对象。
+//         * 此时会对阶段4合并产生的RootBeanDefinition中的beanClass进行解析，将bean的类名转换为Class对象，然后赋值给beanClass。
+//         * 源码位于：org.springframework.beanas.factory.support.AbstractBeanFactory#resolveBeanClass
+//         * 上面得到了Bean Class对象以及合并之后的BeanDefinition，下面就开始进入实例化这个对象的阶段了。
+//         *
+//         * Bean实例化分为3个阶段：前阶段、实例化阶段、后阶段
+//         * /
+    /**
+     * 阶段6：Bean实例化阶段
+     * 分为2个小阶段
+     * 1.bean实例化前操作
+     * 2.bean实例化操作
+     */
+
+    /**
+     * Bean实例化前操作
+     * DefaultListableBeanFactory有个非常重要的字段：
+     * private final List<BeanPostProcessor> beanPostProcessors = new CopyOnWriteArrayList<>();
+     * 是一个BeanPostProcessor类型的集合
+     * BeanPostProcessor是一个接口，还有很多子接口，这些接口中提供了很多方法，spring在bean生命周期的不同阶段，会调用上面这个列表中的BeanPostProcessor中的一些方法，来对生命周期进行拓展，
+     * bean生命周期中的所有拓展点都是依靠这个集合中的BeanPostProcessor来实现的，所以如果大家想对bean的声明周期进行干预，这块需要掌握好
+     *
+     */
+    /**
+     * 案例13： 利用postProcessBeforeInstantiation进行替换bean（在这个方法中直接返回一个bean的一个实例）
+     * 原理：bean初始化前阶段，会调用{@link org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor#postProcessBeforeInitialization(Object, String)}
+     */
+    @Test
+    public void test13() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        //添加一个BeanPostProcessor: InstantiationAwareBeanPostProcessor
+        factory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
+            @Override
+            public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
+                System.out.println("调用postProcessBeforeInstantiation()方法");
+                //发现类型是Car类型的时候，硬编码创建一个Car对象返回
+                if (beanClass == Car.class) {
+                    Car car = new Car();
+                    car.setName("保时捷");
+                    return car;
+                }
+                return null;//当返回null时胡继续执行下一阶段
+            }
+        });
+        //定义一个car bean
+        AbstractBeanDefinition carBeanDefinition = BeanDefinitionBuilder
+                .genericBeanDefinition(Car.class)
+                .addPropertyValue("name", "奥迪")
+                .getBeanDefinition();
+        factory.registerBeanDefinition("car", carBeanDefinition);
+        //从容器中获取car这个bean的实例
+        System.out.println(factory.getBean("car"));
+        /**
+         * 调用postProcessBeforeInstantiation()方法
+         * Car{name='保时捷'}
+         */
+        /**
+         * 定义的和输出的不一致的原因是因为：我们在创建InstatiationAwareBeanPostProcessor@postProcessBeforeInstantiation方法中手动创建了一个实例直接返回了，而不是依靠spring内部去创建这个实例。
+         *
+         *
+         * 小结：
+         * 实际上，在实例化前阶段对bean的创建进行干预的情况，用的非常少，所以大部分bean的创建还是会继续走下面的阶段。
+         */
+    }
+
+    /**
+     * Bean实例化操作
+     * 这个过程会通过反射来调用bean的构造器来创建bean的实例。
+     * 具体需要使用哪个构造器，spring为开发者提供了一个接口，允许开发者自己来判断用哪个构造器。
+     *
+     */
+    /**
+     * 案例14：自定义一个注解，当构造器被这个注解标注的时候，让spring自动选择使用这个构造器创建对象。
+     * <p>
+     * 通过{@link org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor#determineCandidateConstructors(Class, String)}来确定使用哪个构造器来创建bean实例
+     */
+    @Test
+    public void test14() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        //创建一个SmartInstantiationAwareBeanPostProcessor，将其添加到容器中
+        factory.addBeanPostProcessor(new MySmartInstantiationAwareBeanPostProcessor());
+        factory.registerBeanDefinition("name", BeanDefinitionBuilder
+                .genericBeanDefinition(String.class)
+                .addConstructorArgValue("JYX")
+                .getBeanDefinition());
+        factory.registerBeanDefinition("age", BeanDefinitionBuilder
+                .genericBeanDefinition(Integer.class)
+                .addConstructorArgValue(30)
+                .getBeanDefinition());
+        factory.registerBeanDefinition("person", BeanDefinitionBuilder
+                .genericBeanDefinition(Person.class)
+                .getBeanDefinition());
+
+        Person person = factory.getBean("person", Person.class);
+        System.out.println(person);
+        /**
+         * class us.fjj.spring.learning.beanlifecycle.test14.Person
+         * 调用MySmartInstantiationAwareBeanPostProcessor.determineCandidateConstructors方法
+         * class java.lang.String
+         * 调用MySmartInstantiationAwareBeanPostProcessor.determineCandidateConstructors方法
+         * 调用了Person(String name)
+         * Person{name='JYX', age=null}
+         */
+        /*
+        从输出中可以看出调用了Person中标注@MyAutowired标注的构造器。
+         */
+    }
+
+    /**
+     * 阶段7：合并后的BeanDefinition处理
+     */
+
+    /**
+     * postProcessMergedBeanDefinition有2个实现类：
+     * 1.org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
+     * 在postProcessMergedBeanDefinition方法中对@Autowired、@Value标注的方法、字段进行缓存
+     * 2.org.springframework.context.annotation.CommonAnnotationBeanPostProcessor
+     * 在postProcessMergedBeanDefinition方法中对@Resource标注的字段、@Resource标注的方法、@PostConstruct标注的字段、@PreDestroy标注的方法进行缓存
+     *
+     */
+
+    /**
+     * 阶段8：Bean属性设置阶段
+     *
+     * 属性设置阶段分为3个小的阶段
+     * 1.实例化后阶段
+     * 2.Bean属性赋值前处理
+     * 3.Bean属性赋值
+     */
+
+    /**
+     * 实例化后阶段
+     * 会调用InstantiationAwareBeanPostProcessor接口的postProcessAfterInstantiation这个方法。
+     * postProcessAfterInstantiation方法返回false的时候，后续的Bean属性赋值前处理、Bean属性赋值都会被跳过。
+     */
+    @Test
+    public void test15() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+
+
+        //设置跳过user1的属性赋值
+        factory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
+            @Override
+            public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
+                return !"user1".equals(beanName);
+            }
+        });
+
+        factory.registerBeanDefinition("user1", BeanDefinitionBuilder
+                .genericBeanDefinition(UserModel.class)
+                .addPropertyValue("name", "YK")
+                .addPropertyValue("age", 30)
+                .getBeanDefinition());
+
+        factory.registerBeanDefinition("user2", BeanDefinitionBuilder
+                .genericBeanDefinition(UserModel.class)
+                .addPropertyValue("name", "JYX")
+                .addPropertyValue("age", 31)
+                .getBeanDefinition());
+
+        for (String beanName :
+                factory.getBeanDefinitionNames()) {
+            System.out.println(String.format("%s->%s", beanName, factory.getBean(beanName)));
+        }
+        /**
+         * user1->UserModel{name='null', age=null}
+         * user2->UserModel{name='JYX', age=31}
+         */
+    }
+
+    /**
+     * Bean属性赋值前阶段
+     * 这个阶段会调用InstantiationAwareBeanPostProcessor接口的postProcessProperties方法。
+     * 可以通过postProcessProperties参数中的PropertyValues保存了bean实例对象中所有属性值的设置，所以我们可以在这个方法中对PropertyValues值进行修改。
+     *
+     * 这个方法有两个比较重要的实现类
+     * 1.AutowiredAnnotationBeanPostProcessor在这个方法中对@Autowired、@Value标注的字段、方法注入值。
+     * 2.CommonAnnotationBeanPostProcessor在这个方法中对@Resource标注的字段和方法注入值。
+     */
+
+    /**
+     * 案例16
+     */
+    @Test
+    public void test16() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        factory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
+            /**
+             * 对user1这个bean的属性值进行修改
+             * @param pvs
+             * @param bean
+             * @param beanName
+             * @return
+             * @throws BeansException
+             */
+            @Override
+            public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
+                if ("user1".equals(beanName)) {
+//                    if (pvs == null) {
+//                        pvs = new MutablePropertyValues();
+//                    }
+                    if (pvs instanceof MutablePropertyValues) {
+                        MutablePropertyValues mpvs = (MutablePropertyValues) pvs;
+                        mpvs.add("name", "JYX");
+                        mpvs.add("age", 99);
+                    }
+                }
+                return null;
+            }
+        });
+
+        //注意user1 没有给属性设置值
+        factory.registerBeanDefinition("user1",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(UserModel.class)
+                        .getBeanDefinition());
+        factory.registerBeanDefinition("user2",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(UserModel.class)
+                        .addPropertyValue("name", "YK")
+                        .addPropertyValue("age", 1000)
+                        .getBeanDefinition());
+
+        for (String beanName :
+                factory.getBeanDefinitionNames()) {
+            System.out.println(String.format("%s->%s", beanName, factory.getBean(beanName)));
+        }
+
+        /**
+         *user1->UserModel{name='JYX', age=99}
+         * user2->UserModel{name='YK', age=1000}
+         */
+    }
+
+    /**
+     * Bean属性赋值阶段
+     * 循环处理PropertyValues中的属性值信息，通过反射调用set方法将属性的值设置到bean实例中。
+     * PropertyValues中的值是通过bean xml中的property元素配置的，或者调用MutablePropertyValues中add方法设置的值。
      */
 }
