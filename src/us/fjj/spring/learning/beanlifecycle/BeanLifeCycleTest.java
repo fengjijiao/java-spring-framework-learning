@@ -4,14 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValues;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
-import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.support.*;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -21,6 +19,10 @@ import us.fjj.spring.learning.beanlifecycle.test14.Person;
 import us.fjj.spring.learning.beanlifecycle.test15.UserModel;
 import us.fjj.spring.learning.beanlifecycle.test17.AwareBean;
 import us.fjj.spring.learning.beanlifecycle.test18.Bean1;
+import us.fjj.spring.learning.beanlifecycle.test19.Bean2;
+import us.fjj.spring.learning.beanlifecycle.test23.MyDestructionAwareBeanPostProcessor;
+import us.fjj.spring.learning.beanlifecycle.test25.MainConfig25;
+import us.fjj.spring.learning.beanlifecycle.test25.ServiceA;
 import us.fjj.spring.learning.beanlifecycle.test3.User;
 import us.fjj.spring.learning.beanlifecycle.test5.CompositeObj;
 import us.fjj.spring.learning.beanlifecycle.test7.Service1;
@@ -1049,16 +1051,313 @@ public class BeanLifeCycleTest {
         /**
          * 在AnnotationConfigApplicationContext源码中，内部会添加很多BeanPostProcessor到DefaultListableBeanFactory中.
          */
+    }
 
+    /**
+     * Bean初始化阶段
+     *
+     * 2个步骤
+     * 1.调用InitializingBean接口的afterPropertiesSet方法
+     * 2.调用定义bean的时候指定的初始化方法
+     */
+    /**
+     *1.调用InitializingBean接口的afterPropertiesSet方法
+     * 当bean实现了这个接口的时候，会在这个阶段被调用
+     */
+    /**
+     * 2.调用定义bean的时候指出的初始化方法
+     * 方式一：xml方式指定初始化方法
+     * <bean init-method="bean中的方法名称"/>
+     * 方式二：@Bean的方式指定初始化方法
+     * @Bean(initMethod="初始化方法")
+     * 方式三：api的方式指定初始化方法
+     * this.beanDefinition.setInitMethodName(methodName);
+     * 初始化方法最终会赋值给下面这个字段
+     * {@link org.springframework.beans.factory.support.AbstractBeanDefinition#initMethodName}
+     */
+    /**
+     * 案例19
+     */
+    @Test
+    public void test19() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        BeanDefinition bean2 = BeanDefinitionBuilder
+                .genericBeanDefinition(Bean2.class)
+                .setInitMethodName("init")
+                .getBeanDefinition();
+        factory.registerBeanDefinition("bean2", bean2);
+        System.out.println(factory.getBean("bean2"));
         /**
-         * Bean初始化阶段
          *
-         * 2个步骤
-         * 1.调用InitializingBean接口的afterPropertiesSet方法
-         * 2.调用定义bean的时候指定的初始化方法
+         调用afterPropertiesSet
+         调用init()方法
+         us.fjj.spring.learning.beanlifecycle.test19.Bean2@5b67bb7e
+         */
+    }
+
+    /**
+     * Bean初始化后阶段
+     * 通常称postProcessAfterInitialization这个方法为: bean初始化后置操作。
+     */
+    /**
+     * 案例20: bean初始化后置处理
+     */
+    @Test
+    public void test20() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+
+        //加入bean初始化后置处理器方法实现
+        factory.addBeanPostProcessor(new BeanPostProcessor() {
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+                System.out.println("postProcessAfterInitialization: "+ beanName);
+                return bean;//当返回为null时终止该阶段（bean初始化后阶段）
+            }
+        });
+        BeanDefinition str1 = BeanDefinitionBuilder
+                .genericBeanDefinition(String.class)
+                .addConstructorArgValue("JYX")
+                .getBeanDefinition();
+        BeanDefinition str2 = BeanDefinitionBuilder
+                .genericBeanDefinition(String.class)
+                .addConstructorArgValue("YK")
+                .getBeanDefinition();
+
+        factory.registerBeanDefinition("str1", str1);
+        factory.registerBeanDefinition("str2", str2);
+
+        for (String beanName:
+                factory.getBeanDefinitionNames()) {
+            System.out.println(String.format("%s->%s", beanName, factory.getBean(beanName)));
+        }
+        /**
+         * postProcessAfterInitialization: str1
+         * str1->JYX
+         * postProcessAfterInitialization: str2
+         * str2->YK
          */
         /**
+         * 当注释掉for循环时，没有输出任何内容。原因是：使用BeanFactory作为容器时，bean在第一次使用时才会实例化。
+         * 具体内容如下：
+         * Spring Bean的实例化时机
+         * Spring什么时候实例化bean，分两种情况：
          *
+         * 如果使用BeanFactory做为bean容器，则所有bean都是在第一次使用时才实例化；
+         *
+         * 如果使用的是ApplicationContext，则：
+         * 如果bean的scope是singleton的，并且lazy-init为false(默认是false，所以可以不用设置)，则 ApplicationContext启动的时候就实例化该bean，并且将实例化的bean放在一个Map结构的缓存中，下次再使用该bean的时候，直接从这个缓存中取；
+         * 如果bean的scope是singleton的，并且lazy-init为true，则该bean的实例化是在第一次使用该bean的时候进行实例化；
+         * 如果bean的scope是prototype的，则该bean的实例化是在第一次使用该bean的时候进行实例化。
+         * ————————————————
+         * 版权声明：本文为CSDN博主「nju.拈花」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+         * 原文链接：https://blog.csdn.net/nlznlz/article/details/100069915
+         */
+    }
+
+    /**
+     * 阶段10：所有单例bean初始化完成后阶段
+     * 所有单例bean实例化完成之后，spring会回调下面这个接口：
+     * SmartInitializingSingleton#afterSingletonsInstantiated()
+     * 调用逻辑位于：
+     * {@link DefaultListableBeanFactory#preInstantiateSingletons()}
+     * 确保所有非lazy的单例都被实例化，同时考虑到FactoryBeans。如果需要，通常在工厂设置结束时调用
+     * 该方法内部会先触发所有非言辞加载的单例bean初始化，然后从容器中查找类型是SmartInitializingSingleton类型的bean,然后调用他的afterSingletonsInstantiated方法。
+     */
+    /**
+     * 案例21：通过ApplicationContext自动回调SmartInitializingSingleton接口
+     */
+    @Test
+    public void test21() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.register(us.fjj.spring.learning.beanlifecycle.test21.MainConfig21.class);
+        System.out.println("开始启动容器");
+        context.refresh();
+        System.out.println("容器启动完毕");
+        //上两行(除sout)等价于直接将MainConfig21.class作为AnnotationConfigApplicationContext的参数
+        /**
+         * 开始启动容器
+         * 创建Service1
+         * 创建Service2
+         * afterSingletonsInstantiated()
+         * 容器启动完毕
+         */
+    }
+
+    /**
+     * 案例22: 通过api的方式让DefaultListableBeanFactory去回调SmartInitializingSingleton
+     */
+    @Test
+    public void test22() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        factory.registerBeanDefinition("service1",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test22.Service1.class)
+                        .getBeanDefinition());
+        factory.registerBeanDefinition("service2",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test22.Service2.class)
+                        .getBeanDefinition());
+        factory.registerBeanDefinition("mySmartInitializingSingleton",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test22.MySmartInitializingSingleton.class)
+                        .getBeanDefinition());
+        System.out.println("准备触发所有单例bean初始化");
+        //触发所有Bean初始化，并且回调SmartInitializingSingleton#afterSingletonsInstantiated方法
+        factory.preInstantiateSingletons();
+        /**
+         * 上面通过api的方式注册bean
+         * 最后调用factory.preInstantiateSingletons触发所有非lazy单例bean初始化，所有bean装配完毕之后，会回调SmartInitializingSingleton接口。
+         */
+        /**
+         * 准备触发所有单例bean初始化
+         * 调用了Service1的构造函数!
+         * 调用了Service2的构造函数!
+         * afterSingletonsInstantiated()
+         */
+    }
+
+
+    /**
+     * 阶段11：Bean使用阶段
+     * 调用getBean得到bean之后
+     */
+
+
+    /**
+     * 阶段12：bean销毁阶段
+     *
+     * 触发bean销毁的几种方式
+     * 1.调用{@link org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#destroyBean(Object)}
+     * 2.调用{@link ConfigurableBeanFactory#destroySingletons()}
+     * 3.调用ApplicationContext中的close方法
+     *
+     * Bean销毁阶段会依次执行
+     * 1.轮询beanPostProcessors列表，如果是DestructAwareBeanPostProcessor这种类型的，会调用其内部的postProcessBeforeDestruction方法
+     * 2.如果bean实现了org.springframework.beans.factory.DisposableBean接口，会调用这个接口中的destroy方法
+     * 3.调用bean自定义的销毁方法
+     *
+     * 其中DestructionAwareBeanPostProcessor有一个关键的实现类
+     * {@link org.springframework.context.annotation.CommonAnnotationBeanPostProcessor}
+     * CommonAnnotationBeanPostProcessor#postProcessBeforeDestruction方法中会调用bean中所有标注了@PreDestroy的方法
+     *
+     *
+     * 自定义销毁方法的3种方式
+     * 方式一：xml种指定销毁方法
+     * <bean destroy-method="bean中的方法名称"/>
+     * 方式二：@Bean中指定销毁方法
+     * @Bean(destroyMethod = "销毁的方法")
+     * 方式三：api的方式指定销毁方法
+     * this.beanDefinition.setDestroyMethodName(methodName);
+     *
+     * 初始化方法最终会赋值给下面这个字段
+     * {@link org.springframework.beans.factory.support.AbstractBeanDefinition#destroyMethodName}
+     *
+     */
+    /**
+     * 案例23: 自定义DestructionAwareBeanPostProcessor
+     */
+    @Test
+    public void test23() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        factory.addBeanPostProcessor(new MyDestructionAwareBeanPostProcessor());
+        factory.registerBeanDefinition("serviceA1",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test23.ServiceA.class)
+                        .getBeanDefinition());
+        factory.registerBeanDefinition("serviceA2",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test23.ServiceA.class)
+                        .getBeanDefinition());
+        factory.registerBeanDefinition("serviceA3",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test23.ServiceA.class)
+                        .getBeanDefinition());
+        //触发所有单例实例化
+        factory.preInstantiateSingletons();
+        System.out.println("销毁serviceA1");
+        factory.destroySingleton("serviceA1");
+        System.out.println("触发所有单例bean的销毁");
+        factory.destroySingletons();
+        /**
+         * create class us.fjj.spring.learning.beanlifecycle.test23.ServiceA
+         * create class us.fjj.spring.learning.beanlifecycle.test23.ServiceA
+         * create class us.fjj.spring.learning.beanlifecycle.test23.ServiceA
+         * 销毁serviceA1
+         * 准备销毁serviceA1
+         * 触发所有单例bean的销毁
+         * 准备销毁serviceA3
+         * 准备销毁serviceA2
+         */
+        /**
+         * 可以看到postProcessBeforeDestruction被调用了3次，依次销毁3个自定义bean
+         */
+    }
+
+    /**
+     * 案例24: 触发@PreDestroy标注的方法被调用
+     */
+    @Test
+    public void test24() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+
+        //添加自定义的DestructionAwareBeanPostProcessor
+        factory.addBeanPostProcessor(new MyDestructionAwareBeanPostProcessor());
+        //将CommonAnnotationBeanPostProcessor加入
+        factory.addBeanPostProcessor(new CommonAnnotationBeanPostProcessor());
+
+        factory.registerBeanDefinition(
+                "serviceB",
+                BeanDefinitionBuilder
+                        .genericBeanDefinition(us.fjj.spring.learning.beanlifecycle.test24.ServiceB.class)
+                        .getBeanDefinition()
+        );
+
+        //触发单例实例化
+        factory.preInstantiateSingletons();
+
+        //销毁单例
+        factory.destroySingletons();
+
+        /**
+         * ServiceB()构造方法
+         * 准备销毁serviceB
+         * 被@PreDestroy标注的方法destroy
+         */
+    }
+
+    /**
+     * 案例25: 销毁阶段的执行顺序
+     * 实际上ApplicationContext内部已经将spring内部一些常见的必须的BeanPostProcessor自动装配到beanPostProcessors列表中，比如我们熟悉的下面几个：
+     * 1. {@link org.springframework.context.annotation.CommonAnnotationBeanPostProcessor}用来处理@Resource、@PostConstruct、@PreDestroy注解
+     * 2. {@link org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor}用来处理@Autowired、@Value注解
+     * 3. {@link org.springframework.context.support.ApplicationContextAwareProcessor}用力回调bean实现的各种Aware接口
+     *
+     * 所以通过ApplicationContext来销毁bean，会触发3种方式的执行。
+     */
+    @Test
+    public void test25() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.register(MainConfig25.class);
+        //启动容器
+        System.out.println("准备启动容器");
+        context.refresh();
+        System.out.println("容器启动完毕");
+        System.out.println("serviceA: "+ context.getBean(ServiceA.class));
+        //关闭容器
+        System.out.println("准备关闭容器");
+        context.close();
+        System.out.println("容器关闭完成");
+        /**
+         * 准备启动容器
+         * 创建ServiceA实例
+         * 容器启动完毕
+         * serviceA: us.fjj.spring.learning.beanlifecycle.test25.ServiceA@1bc715b8
+         * 准备关闭容器
+         * preDestroy1()
+         * preDestroy2()
+         * DisposableBean接口中的destroy()
+         * 我是自定义的销毁方法：customDestroyMethod()
+         * 容器关闭完成
          */
     }
 }
