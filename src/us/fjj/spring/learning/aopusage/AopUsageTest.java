@@ -8,10 +8,13 @@ import org.springframework.aop.*;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import us.fjj.spring.learning.aopusage.test1.UserService;
+import us.fjj.spring.learning.aopusage.test11.BService;
+import us.fjj.spring.learning.aopusage.test12.CService;
 import us.fjj.spring.learning.aopusage.test5.AnimalService;
 import us.fjj.spring.learning.aopusage.test5.MyThrowsAdvice;
 import us.fjj.spring.learning.aopusage.test6.FoundsService;
 import us.fjj.spring.learning.aopusage.test7.SendMsgThrowsAdvice;
+import us.fjj.spring.learning.aopusage.test9.AServiceImpl;
 
 import java.lang.reflect.Method;
 
@@ -669,5 +672,186 @@ public class AopUsageTest {
      * 1.创建代理所需参数配置
      * 2.根据代理参数获取AopProxy对象
      * 3.通过AopProxy获取代理对象
+     *
+     * 通常使用ProxyFactory来创建代理对象，代理只需要下面几行：
+     * //通过spring提供的代理创建工厂来创建代理
+     * ProxyFactory proxyFactory = new ProxyFactory();
+     * //ProxyFactory继承了AdvisedSupport类，所以可以直接通过ProxyFactory来设置创建代理需要的参数
+     * //为工厂指定目标对象
+     * proxyFactory.setTarget(target);
+     * //添加顾问
+     * proxyFactory.addAdvisor(advisor);
+     * //调用proxyFactory.getProxy();创建代理
+     * Object proxy proxyFactory.getProxy();
      */
+    /**
+     * 案例1: 查看生成的代理对象的一些信息。
+     */
+    @Test
+    public void test8() {
+        UserService target = new UserService();
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.setTarget(target);
+        proxyFactory.addAdvisor(new DefaultPointcutAdvisor(new MethodBeforeAdvice() {
+            @Override
+            public void before(Method method, Object[] args, Object target) throws Throwable {
+                System.out.printf("将要执行%s方法！\n", method.getName());
+            }
+        }));
+        UserService userService = (UserService) proxyFactory.getProxy();
+        userService.say("yk");
+        System.out.println(String.format("代理对象的类型：%s", userService.getClass()));
+        System.out.println(String.format("代理对象的父类：%s", userService.getClass().getSuperclass()));
+        System.out.println("实现了如下的接口：");
+        for(Class<?> cls : userService.getClass().getInterfaces()) {
+            System.out.println(String.format("%s", cls));
+        }
+        /**
+         * 将要执行say方法！
+         * yk
+         * 代理对象的类型：class us.fjj.spring.learning.aopusage.test1.UserService$$EnhancerBySpringCGLIB$$65aad5da
+         * 代理对象的父类：class us.fjj.spring.learning.aopusage.test1.UserService
+         * 实现了如下的接口：
+         * interface org.springframework.aop.SpringProxy
+         * interface org.springframework.aop.framework.Advised
+         * interface org.springframework.cglib.proxy.Factory
+         */
+    }
+    /**
+     * 案例2：有接口的情况，默认会通过jdk动态代理生成
+     */
+    @Test
+    public void test9() {
+        AServiceImpl aService = new AServiceImpl();
+        ProxyFactory proxyFactory = new ProxyFactory();
+        //设置需要被代理的对象
+        proxyFactory.setTarget(aService);
+        //设置需要被代理的接口
+        proxyFactory.setInterfaces(us.fjj.spring.learning.aopusage.test9.IService.class);//important
+        proxyFactory.addAdvisor(new DefaultPointcutAdvisor(new MethodBeforeAdvice() {
+            @Override
+            public void before(Method method, Object[] args, Object target) throws Throwable {
+                System.out.printf("将要执行方法：%s\n", method.getName());
+            }
+        }));
+        Object aService1 = proxyFactory.getProxy();
+        ((us.fjj.spring.learning.aopusage.test9.IService)aService1).say("jyx");
+        System.out.println(String.format("代理对象的类型：%s", aService1.getClass()));
+        System.out.println(String.format("代理对象的父类：%s", aService1.getClass().getSuperclass()));
+        System.out.println("代理对象实现了如下接口：");
+        for(Class<?> cls: aService1.getClass().getInterfaces()) {
+            System.out.println(cls);
+        }
+        /**
+         * 将要执行方法：say
+         * jyx
+         * 代理对象的类型：class jdk.proxy2.$Proxy13
+         * 代理对象的父类：class java.lang.reflect.Proxy
+         * 代理对象实现了如下接口：
+         * interface us.fjj.spring.learning.aopusage.test9.IService
+         * interface org.springframework.aop.SpringProxy
+         * interface org.springframework.aop.framework.Advised
+         * interface org.springframework.core.DecoratingProxy
+         */
+    }
+    /**
+     * 案例3：在案例2的基础上强制使用cglib代理
+     */
+    @Test
+    public void test10() {
+        AServiceImpl aService = new AServiceImpl();
+        ProxyFactory proxyFactory = new ProxyFactory();
+        //设置需要被代理的对象
+        proxyFactory.setTarget(aService);
+        //设置需要被代理的接口
+        proxyFactory.setInterfaces(us.fjj.spring.learning.aopusage.test9.IService.class);//important
+        proxyFactory.setProxyTargetClass(true);//强制使用cglib代理
+        proxyFactory.addAdvisor(new DefaultPointcutAdvisor(new MethodBeforeAdvice() {
+            @Override
+            public void before(Method method, Object[] args, Object target) throws Throwable {
+                System.out.printf("将要执行方法：%s\n", method.getName());
+            }
+        }));
+        Object aService1 = proxyFactory.getProxy();
+        ((us.fjj.spring.learning.aopusage.test9.IService)aService1).say("jyx");
+        System.out.println(String.format("代理对象的类型：%s", aService1.getClass()));
+        System.out.println(String.format("代理对象的父类：%s", aService1.getClass().getSuperclass()));
+        System.out.println("代理对象实现了如下接口：");
+        for(Class<?> cls: aService1.getClass().getInterfaces()) {
+            System.out.println(cls);
+        }
+        /**
+         * 将要执行方法：say
+         * jyx
+         * 代理对象的类型：class us.fjj.spring.learning.aopusage.test9.AServiceImpl$$EnhancerBySpringCGLIB$$1699ee63
+         * 代理对象的父类：class us.fjj.spring.learning.aopusage.test9.AServiceImpl
+         * 代理对象实现了如下接口：
+         * interface us.fjj.spring.learning.aopusage.test9.IService
+         * interface org.springframework.aop.SpringProxy
+         * interface org.springframework.aop.framework.Advised
+         * interface org.springframework.cglib.proxy.Factory
+         */
+    }
+    /**
+     * 案例4：将代理暴露在threadLocal中
+     * service类中有2个方法，m1方法中会调用m2,通过aop代理对这个类创建了一个代理，通过代理来统计所有调用方法的耗时。
+     */
+    @Test
+    public void test11() {
+        BService bService = new BService();
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.setTarget(bService);
+        proxyFactory.addAdvice(new MethodInterceptor() {
+            @Override
+            public Object invoke(MethodInvocation invocation) throws Throwable {
+                long startT = System.nanoTime();
+                Object result = invocation.proceed();
+                long endT = System.nanoTime();
+                System.out.println(String.format("%s耗时: %dns", invocation.getMethod().getName(), endT - startT));
+                return result;
+            }
+        });
+        BService bService1 = (BService) proxyFactory.getProxy();
+        bService1.m1();
+        /**
+         * m1
+         * m2
+         * m1耗时: 16699400ns
+         */
+    }
+    /**
+     * 为啥没有输出m2方法是耗时？
+     * 原因：m2方法是在m1方法中通过this的方式来调用的，this实际上指向的是上面代码中的target对象。
+     * 那么我们如何能让此处的m2也能被增强，你需要通过代理来调用m2方法才行，可以将代理对象暴露在threadLocal中，然后在m1方法中获取到threadLocal中的代理对象，通过代理对象来调用m2就可以了。
+     * 需要改动2处：
+     * 1.配置代理创建时，将其暴露出去
+     * proxyFactory.setExposeProxy(true);
+     * 2.m1中调用m2的方法需要修改为下面这样：
+     * ((BSerivce) AopContext.currentProxy()).m2();
+     */
+    @Test
+    public void test12() {
+        CService cService = new CService();
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.setTarget(cService);
+        proxyFactory.setExposeProxy(true);//1
+        proxyFactory.addAdvice(new MethodInterceptor() {
+            @Override
+            public Object invoke(MethodInvocation invocation) throws Throwable {
+                long startT = System.nanoTime();
+                Object result = invocation.proceed();
+                long endT = System.nanoTime();
+                System.out.println(String.format("%s耗时: %dns", invocation.getMethod().getName(), endT - startT));
+                return result;
+            }
+        });
+        CService cService1 = (CService) proxyFactory.getProxy();
+        cService1.m1();
+        /**
+         * m1
+         * m2
+         * m2耗时: 48600ns
+         * m1耗时: 11848900ns
+         */
+    }
 }

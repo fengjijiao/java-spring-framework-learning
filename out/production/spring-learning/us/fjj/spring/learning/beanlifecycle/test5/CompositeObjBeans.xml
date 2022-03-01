@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="car1" class="us.fjj.spring.learning.beanlifecycle.test1.Car">
+        <property name="name" value="保时捷"/>
+    </bean>
+    <bean id="car2" parent="car1"/>
+    <bean id="compositeObj" class="us.fjj.spring.learning.beanlifecycle.test5.CompositeObj">
+        <property name="name" value="coding"/>
+        <property name="salary" value="7000"/>
+        <property name="carList">
+            <list>
+                <ref bean="car1"/>
+                <ref bean="car2"/>
+            </list>
+        </property>
+        <property name="stringList">
+            <list>
+                <value>SSW1</value>
+                <value>SSW2</value>
+                <value>SSW3</value>
+            </list>
+        </property>
+        <property name="car1" ref="car1"/>
+        <property name="carSet">
+            <set>
+                <ref bean="car1"/>
+                <ref bean="car2"/>
+            </set>
+        </property>
+        <property name="stringSet">
+            <set>
+                <value>YK1</value>
+                <value>YK2</value>
+                <value>YK3</value>
+            </set>
+        </property>
+        <property name="stringCarMap">
+            <map>
+                <entry key="YK" value-ref="car1"/>
+                <entry key="JYX" value-ref="car2"/>
+            </map>
+        </property>
+        <property name="stringMap">
+            <map>
+                <entry key="JYX" value="YK"/>
+                <entry key="YK" value="JYX"/>
+            </map>
+        </property>
+    </bean>
+</beans>
