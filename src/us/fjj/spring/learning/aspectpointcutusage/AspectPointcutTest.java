@@ -2,13 +2,35 @@ package us.fjj.spring.learning.aspectpointcutusage;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.cglib.proxy.Enhancer;
+import org.springframework.cglib.proxy.NoOp;
+import org.springframework.util.ClassUtils;
 import us.fjj.spring.learning.aspectpointcutusage.test1.AspectA;
 import us.fjj.spring.learning.aspectpointcutusage.test1.ServiceA;
+import us.fjj.spring.learning.aspectpointcutusage.test10.Ann10;
+import us.fjj.spring.learning.aspectpointcutusage.test10.Aspect10;
+import us.fjj.spring.learning.aspectpointcutusage.test10.ServiceI;
+import us.fjj.spring.learning.aspectpointcutusage.test11.Aspect11;
+import us.fjj.spring.learning.aspectpointcutusage.test11.ServiceJ;
+import us.fjj.spring.learning.aspectpointcutusage.test12.Aspect12;
+import us.fjj.spring.learning.aspectpointcutusage.test12.ServiceK;
+import us.fjj.spring.learning.aspectpointcutusage.test13.Aspect13;
+import us.fjj.spring.learning.aspectpointcutusage.test13.S13;
 import us.fjj.spring.learning.aspectpointcutusage.test2.AspectB;
 import us.fjj.spring.learning.aspectpointcutusage.test2.ServiceB;
 import us.fjj.spring.learning.aspectpointcutusage.test2.ServiceC;
 import us.fjj.spring.learning.aspectpointcutusage.test3.Aspect3;
 import us.fjj.spring.learning.aspectpointcutusage.test3.C2;
+import us.fjj.spring.learning.aspectpointcutusage.test4.*;
+import us.fjj.spring.learning.aspectpointcutusage.test5.Aspect5;
+import us.fjj.spring.learning.aspectpointcutusage.test5.ServiceE;
+import us.fjj.spring.learning.aspectpointcutusage.test6.Aspect6;
+import us.fjj.spring.learning.aspectpointcutusage.test6.ServiceF;
+import us.fjj.spring.learning.aspectpointcutusage.test7.Aspect7;
+import us.fjj.spring.learning.aspectpointcutusage.test7.ServiceG;
+import us.fjj.spring.learning.aspectpointcutusage.test8.Aspect8;
+import us.fjj.spring.learning.aspectpointcutusage.test8.ServiceHC;
 
 /**
  * @Aspect中@Pointcut的12种用法
@@ -369,6 +391,11 @@ public class AspectPointcutTest {
      * * Service1.*(*,String) 匹配Service1中只有2个参数且第二个参数类型是Sting的方法
      * * Service1.*(..,String) 匹配Serivce1中最后一个参数类型是String的方法
      */
+
+
+
+
+
     /**
      * 类型匹配语法
      * 很多地方会按照类型的匹配，先来说以下类型匹配的语法
@@ -382,7 +409,6 @@ public class AspectPointcutTest {
      * java.lang.*ing 匹配任何java.lang包下的以ing结尾的类型
      * java.lang.Number+ 匹配java.lang包下的任何Number类型及其子类型，如匹配java.lang.Number、java.lang.Integer、java.math.BigInteger
      */
-
     /**
      * 2. within
      * 用法：within(类型表达式)：目标对象target的类型是否和within中指定的类型匹配
@@ -413,4 +439,303 @@ public class AspectPointcutTest {
          * C2: 我是m4方法
          */
     }
+
+
+    /**
+     * 3. this
+     * this(类型全限定名)：通过aop创建的代理对象的类型是否和this中指定的类型匹配；注意判断的目标是代理对象；this中使用的表达式必须是类型全限定名。不支持通配符。
+     * 匹配原则：this(x)，则代理对象proxy满足下面条件时会匹配
+     * x.getClass().isAssignableFrom(proxy.getClass());
+     *
+     * 案例4
+     */
+    @Test
+    public void tes4() {
+        Enhancer enhancer = new Enhancer();
+        enhancer.setSuperclass(C3.class);
+        enhancer.setCallback(NoOp.INSTANCE);
+        Object proxy = enhancer.create();
+        System.out.println(String.format("C3.class.isAssignableFrom(proxy.getClass()): %b", C3.class.isAssignableFrom(proxy.getClass())));
+        System.out.println(String.format("C3.class.isInstance(proxy.getClass()): %b", C3.class.isInstance(proxy.getClass())));
+        System.out.println(String.format("proxy.getClass().isInstance(C3.class): %b", proxy.getClass().isInstance(C3.class)));
+        System.out.println(String.format("C4.class.isAssignableFrom(proxy.getClass()): %b", C4.class.isAssignableFrom(proxy.getClass())));
+        System.out.println(String.format("C4.class.isInstance(proxy.getClass()): %b", C4.class.isInstance(proxy.getClass())));
+        System.out.println(String.format("proxy.getClass().isInstance(C4.class): %b", proxy.getClass().isInstance(C4.class)));
+        /**
+         * C3.class.isAssignableFrom(proxy.getClass()): true
+         * C3.class.isInstance(proxy.getClass()): false
+         * proxy.getClass().isInstance(C3.class): false
+         * C4.class.isAssignableFrom(proxy.getClass()): false
+         * C4.class.isInstance(proxy.getClass()): false
+         * proxy.getClass().isInstance(C4.class): false
+         */
+
+
+        //正式开始
+        ServiceD serviceD = new ServiceD();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        Class<?>[] interfaces = ClassUtils.getAllInterfaces(serviceD);
+        aspectJProxyFactory.setTarget(serviceD);
+        aspectJProxyFactory.setInterfaces(interfaces);//添加这一行后底层实现为jdk代理
+        aspectJProxyFactory.addAspect(Aspect4.class);
+        aspectJProxyFactory.setProxyTargetClass(true);//添加这一行后为cglib代理
+        Object prox = aspectJProxyFactory.getProxy();
+        System.out.println("Aop是否是jdk代理对象"+ AopUtils.isJdkDynamicProxy(prox));
+        System.out.println("Aop是否是cglib代理对象"+ AopUtils.isCglibProxy(prox));
+        ((I1) prox).m1();
+        System.out.println(ServiceD.class.isAssignableFrom(prox.getClass()));
+        /**
+         * jdk proxy
+         * Aop是否是jdk代理对象true
+         * Aop是否是cglib代理对象false
+         * 我是m1方法
+         * false
+         */
+        /**
+         * cglib proxy
+         * Aop是否是jdk代理对象false
+         * Aop是否是cglib代理对象true
+         * 将要执行m1方法
+         * 我是m1方法
+         * true
+         */
+    }
+    /**
+     * 4.target
+     * 用法：target(类型全限定名)：判断目标对象的类型是否和指定的类型匹配；注意判断的是目标对象的类型；表达式必须是类型全限定名，不支持通配符
+     * 匹配原则：如target(x)，则目标对象target满足下面条件时会匹配
+     * x.getClass().isAssignableFrom(target.getClass());
+     */
+    @Test
+    public void test5() {
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        ServiceE serviceE = new ServiceE();
+        aspectJProxyFactory.setTarget(serviceE);
+        aspectJProxyFactory.setProxyTargetClass(true);
+        aspectJProxyFactory.addAspect(Aspect5.class);
+        ServiceE prox = aspectJProxyFactory.getProxy();
+        prox.m1();
+        System.out.println("ServiceE.class.isAssignableFrom(prox.getClass()):"+ServiceE.class.isAssignableFrom(prox.getClass()));
+        /**
+         * 将要执行m1
+         * 我是m1方法
+         * ServiceE.class.isAssignableFrom(prox.getClass()):true
+         */
+    }
+
+    /**
+     * within、this、target对比
+     * 表达式标签    判断的对象   判断规则（x: 指表达式中指定的类型）
+     * within   target对象    target.getClass().equals(表达式中指定的类型);
+     * this proxy对象 x.getClass().isAssignableFrom(proxy.getClass());
+     * target   target对象    x.getClass().isAssignableFrom(target.getClass());
+     */
+
+
+    /**
+     * 5.args
+     * 用法：args(参数类型列表)匹配当前执行方法传入的参数是否为args中指定的类型；注意是匹配传入的参数类型，不是匹配方法签名的参数类型；参数类型列表中的参数必须是类型全限定名，不支持通配符；
+     * args属于动态切入点，也就是执行方法的时候进行判断的，这种切入点开销非常大，非特殊情况下最好不要使用。
+     * 举例说明
+     * 表达式  描述
+     * args(String) 匹配只有一个参数且传入的参数类型是String类型的方法
+     * args(*,String) 匹配只有2个参数且第2个参数类型是String的方法
+     * args(..,String) 匹配最后1个参数类型是String的方法
+     *
+     * 案例6
+     */
+    @Test
+    public void test6() {
+        ServiceF serviceF = new ServiceF();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(serviceF);
+        aspectJProxyFactory.addAspect(Aspect6.class);
+        ServiceF prox = aspectJProxyFactory.getProxy();
+        prox.m1("jyx");
+        prox.m1(1.0f);
+        /**
+         * 参数为：jyx
+         * 传入的参数类型是：class java.lang.String，值为：jyx
+         * 传入的参数类型是：class java.lang.Float，值为：1.0
+         *
+         * 输出中可以看出，m1第一次调用被增强了，第二次没有被增强。
+         * args会在调用的过程中对参数实际的类型进行匹配，比较耗时，慎用。
+         */
+    }
+
+
+    /**
+     * 6. @within
+     * 用法 @within(注解类型) : 匹配指定的注解内定义的方法
+     * 匹配规则
+     * 调用目标方法的时候，通过java中Method.getDeclaringClass()获取当前的方法是哪个类中定义的，然后会看这个类上是否有指定注解。
+     * 被调用的目标方法Method对象.getDeclaringClass().getAnntation(within中指定的注解类型) != null
+     *
+     * 案例7~9
+     */
+    /**
+     * 案例7：目标对象上有@within中指定的注解，这种情况时，目标对象的所有方法都会被拦截
+     */
+    @Test
+    public void test7() {
+        ServiceG serviceG = new ServiceG();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(serviceG);
+        aspectJProxyFactory.addAspect(Aspect7.class);
+        ServiceG prox = aspectJProxyFactory.getProxy();
+        prox.m1();
+        /**
+         * 将要执行m1
+         * 我是m1方法
+         */
+    }
+    /**
+     * 案例8: 定义注解时未使用@Inherited，说明子类无法继承父类上的注解，这个案例中我们将定义一个这样的注解，将注解放在目标类的父类上， 来看一下效果。
+     */
+    @Test
+    public void test8() {
+        ServiceHC serviceHC = new ServiceHC();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(serviceHC);
+        aspectJProxyFactory.addAspect(Aspect8.class);
+        ServiceHC prox = aspectJProxyFactory.getProxy();
+        prox.m1();
+        prox.m2();
+        prox.m3();
+        /**
+         * m2方法虽然也在ServiceH中定义了，但是这个方法被子类ServiceHC重写了，所以调用目标对象中的m2方法的时候，此时发现m2方法是由ServiceHC定义的，而ServiceHC.class.getAnnotation(Ann8.class)为null，所以这个方法不会被拦截。
+         *
+         * 将要执行m1
+         * 我是m1方法
+         * 我是m2
+         * 我是m3
+         *
+         * 将Ann8中添加@Inherited后输出如下
+         *
+         * 将要执行m1
+         * 我是m1方法
+         * 将要执行m2
+         * 我是m2
+         * 将要执行m3
+         * 我是m3
+         */
+    }
+    /**
+     * 案例9: 对案例2进行改造，在注解的定义上面加上@Inherited，此时子类可以继承父类的注解，此时3个方法都会被拦截了。
+     */
+    @Test
+    public void test9() {
+        //
+    }
+
+
+    /**
+     * 7. @target
+     * 用法：@target(注解类型): 判断目标对象target类型上是否有指定的注解；@target中注解类型也必须是全限定类型名。
+     * 匹配规则：target.class.getAnnotation(指定的注解类型) != null;
+     * 2种情况可以匹配：1.注解直接标注在目标类上 2.注解标注在父类上，但是注解必须是可以继承的，即定义注解的时候，需要使用@Inherited标注
+     */
+    @Test
+    public void test10() {
+        ServiceI target = new ServiceI();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(target);
+        aspectJProxyFactory.addAspect(Aspect10.class);
+        ServiceI prox = aspectJProxyFactory.getProxy();
+        prox.m1();
+        System.out.printf("目标类上是否有Ann注解：%b\n", target.getClass().getAnnotation(Ann10.class) != null);
+        /**
+         * 将要执行m1
+         * 我是m1方法
+         * 目标类上是否有Ann注解：true
+         */
+    }
+    /**
+     * 当注解标注在父类上， 注解上没有@Inherited，这种情况下，目标类无法匹配到。
+     * 加上@Inherited后目标对象被拦截。
+     */
+
+
+    /**
+     * 8. @args
+     * 用法：@args(注解类型)：方法参数所属的类上有指定的注解；注意不是参数上有指定的注解，而是参数类型的类上有指定的注解。
+     *
+     * 案例11:
+     */
+    @Test
+    public void test11() {
+        ServiceJ serviceJ = new ServiceJ();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(serviceJ);
+        aspectJProxyFactory.addAspect(Aspect11.class);
+        ServiceJ prox = aspectJProxyFactory.getProxy();
+        prox.m1(new us.fjj.spring.learning.aspectpointcutusage.test11.Car());
+        /**
+         * 将要执行m1
+         * us.fjj.spring.learning.aspectpointcutusage.test11.Car@2488b073
+         */
+    }
+    /**
+     * 案例12: 匹配方法只有2个参数，且第2个参数所属的类型上有Ann11注解
+     * @args(*, Ann11)
+     */
+    @Test
+    public void test12() {
+        ServiceK serviceK = new ServiceK();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(serviceK);
+        aspectJProxyFactory.addAspect(Aspect12.class);
+        ServiceK prox = aspectJProxyFactory.getProxy();
+        prox.m1("yk", new us.fjj.spring.learning.aspectpointcutusage.test12.Car());
+        /**
+         * us.fjj.spring.learning.aspectpointcutusage.test12.Car@34a1d21f
+         */
+    }
+
+    /**
+     * @Pointcut("@args(..,com.javacode2018.aop.demo9.test8.Ann8)")：匹配参数数量大于等于1，
+     * 且最后一个参数所属的类型上有Ann8注解
+     * @Pointcut("@args(*,com.javacode2018.aop.demo9.test8.Ann8,..)")：匹配参数数量大于等于
+     * 2，且第2个参数所属的类型上有Ann8注解
+     * @Pointcut("@args(..,com.javacode2018.aop.demo9.test8.Ann8,*)")：匹配参数数量大于等于
+     * 2，且倒数第2个参数所属的类型上有Ann8注解
+     */
+
+
+    /**
+     * @annotation
+     * 用法：@annotation(注解类型)：匹配被调用的方法上有指定的注解
+     * 案例13
+     */
+    @Test
+    public void test13() {
+        S13 target = new S13();
+        AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory();
+        aspectJProxyFactory.setTarget(target);
+        aspectJProxyFactory.addAspect(Aspect13.class);
+        S13 prox = aspectJProxyFactory.getProxy();
+        prox.m1();
+        prox.m2();
+        prox.m3();
+        prox.m4();
+        /**
+         * 将要执行m1
+         * 我是m1方法
+         * m2
+         * 将要执行m3
+         * m3
+         * m4
+         */
+    }
+
+
+
+
+
+
+
+
+
+
+
 }
