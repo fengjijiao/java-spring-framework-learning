@@ -5,6 +5,7 @@ import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.NoOp;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.util.ClassUtils;
 import us.fjj.spring.learning.aspectpointcutusage.test1.AspectA;
 import us.fjj.spring.learning.aspectpointcutusage.test1.ServiceA;
@@ -17,6 +18,10 @@ import us.fjj.spring.learning.aspectpointcutusage.test12.Aspect12;
 import us.fjj.spring.learning.aspectpointcutusage.test12.ServiceK;
 import us.fjj.spring.learning.aspectpointcutusage.test13.Aspect13;
 import us.fjj.spring.learning.aspectpointcutusage.test13.S13;
+import us.fjj.spring.learning.aspectpointcutusage.test14.BeanService;
+import us.fjj.spring.learning.aspectpointcutusage.test14.MainConfig1;
+import us.fjj.spring.learning.aspectpointcutusage.test15.MainConfig15;
+import us.fjj.spring.learning.aspectpointcutusage.test15.Service15;
 import us.fjj.spring.learning.aspectpointcutusage.test2.AspectB;
 import us.fjj.spring.learning.aspectpointcutusage.test2.ServiceB;
 import us.fjj.spring.learning.aspectpointcutusage.test2.ServiceC;
@@ -728,7 +733,84 @@ public class AspectPointcutTest {
          */
     }
 
+    /**
+     * 10. bean
+     * 用法：bean(bean名称)：这个用在spring环境中，匹配容器中指定名称的bean。
+     * 案例：
+     */
+    @Test
+    public void test14() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig1.class);
+        BeanService beanService1 = context.getBean("beanService1", BeanService.class);
+        beanService1.m1();
+        BeanService beanService2 = context.getBean("beanService2", BeanService.class);
+        beanService2.m1();
+        /**
+         *lxh yyds!.m1()
+         * 将要运行：m1
+         * jyx yyds!.m1()
+         */
+    }
 
+    /**
+     * 11.  reference pointcut
+     * 表示引用其他命名切入点
+     * 有时，我们可以将切入点专门放在一个类中集中定义
+     * 其他地方可以通过引用的方式引入其他类中定义的切入点。
+     * 语法如下：@Pointcut("完整包名类名.方法名称()")
+     * 若引用同一个类中定义切入点，包名和类名可以省略，直接通过方法就可以引用。
+     *
+     */
+    @Test
+    public void test15() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig15.class);
+        Service15 service1 = context.getBean("bean1", Service15.class);
+        System.out.println(service1.getClass());
+        service1.m1();
+        service1.m2();
+        service1.m3();
+        Service15 service2 = context.getBean("bean2", Service15.class);
+        service2.m1();
+        service2.m2();
+        service2.m3();
+        Service15 service3 = context.getBean("bean3", Service15.class);
+        service3.m1();
+        service3.m2();
+        service3.m3();
+        /**
+         * class us.fjj.spring.learning.aspectpointcutusage.test15.Service15$$EnhancerBySpringCGLIB$$8868200d
+         * 111将要执行m1
+         * 222将要执行m1
+         * jyx我是m1方法
+         * 111将要执行m2
+         * 222将要执行m2
+         * jyx我是m2方法
+         * 111将要执行m3
+         * 222将要执行m3
+         * jyx我是m3方法
+         * 222将要执行m1
+         * ssw我是m1方法
+         * 222将要执行m2
+         * ssw我是m2方法
+         * 222将要执行m3
+         * ssw我是m3方法
+         * yk我是m1方法
+         * yk我是m2方法
+         * yk我是m3方法
+         */
+    }
+
+    /**
+     * 组合型的pointcut
+     * pointcut定义时，还可以使用&&、||、!运算符.
+     * &&: 多个匹配都需要满足
+     * ||: 多个匹配中只需要满足一个
+     * !: 匹配不满足的情况下
+     *
+     * @Pointcut("bean(bean1)||bean(bean2)")//匹配bean1或bean2
+     * @Pointcut("@target(Ann1) && @annotation(Ann2)")//匹配目标类上有Ann1注解并且目标方法上有Ann2注解
+     * @Pointcut("@target(Ann1) && !@target(Ann2)")//匹配目标类上有Ann1注解但是没有Ann2注解
+     */
 
 
 
