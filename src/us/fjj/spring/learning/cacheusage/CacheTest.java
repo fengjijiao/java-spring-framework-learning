@@ -28,6 +28,7 @@ import us.fjj.spring.learning.cacheusage.test6.ArticleService6;
 import us.fjj.spring.learning.cacheusage.test6.MainConfig6;
 import us.fjj.spring.learning.cacheusage.test7.ArticleService7;
 import us.fjj.spring.learning.cacheusage.test7.MainConfig7;
+import us.fjj.spring.learning.cacheusage.test8.ArticleService8;
 
 import java.util.*;
 
@@ -359,6 +360,46 @@ AnnotationConfigApplicationContext context = new AnnotationConfigApplicationCont
          * hello world!
          */
     }
+
+    /**
+     * @Caching: 缓存注解组
+     * 当在类上或者同一个方法上同时使用@Cacheable、@CachePut、@CacheEvict这几个注解中的多个的时候，此时可以使用@Caching这个注解来实现。
+     */
+    /**
+     * @see org.springframework.cache.annotation.Caching
+     *
+     * 它包含参数
+     * Cacheable[] cacheable();
+     * CachePut[] put();
+     * CacheEvict[] evict();
+     */
+    @Test
+    public void test31() {
+        //
+    }
+
+
+    /**
+     * @CacheConfig: 提取公共配置
+     * 这个注解标注在类上，可以将其他几个缓存注解（@Cacheable、@CachePut、@CacheEvict）的公共参数给提取出来放在@CacheConfig中。
+     * 比如当一个类中有很多方法都需要使用（@Cacheable、@CachePut、@CacheEvict）这些缓存注解的时候，这3个注解的源码，他们有很多公共的属性，比如：cacheNames、keyGenerator、cacheManager、cacheResolver，若这些属性值都是一样的，可以将其提取出来，放在@CacheConfig中，不过这些注解（@Cacheable、@CachePut、@CacheEvict）中也可以指定属性的值对@CacheConfig中的属性进行覆盖
+     */
+    /**
+     * @see ArticleService8
+     */
+
+
+    /**
+     * 原理
+     * spring中的缓存主要是利用spring中aop实现的，通过aop对需要使用缓存的bean创建代理对象，通过代理对象拦截目标方法的执行，实现缓存功能。
+     * 重点在于@EnableCaching这个注解，可以从@Import这个注解看起
+     * @see EnableCaching
+     * @Import(CachingConfigurationSelector.class)
+     * public @interface EnableCaching {}
+     *
+     * 最终会给需要使用缓存的bean船舰代理对象，并且会在代理中添加一个拦截器org.springframework.cache.interceptor.CacheInterceptor，这个类中的invoke方法是关键，会拦截所有缓存相关的目标方法的执行。
+     * {@link org.springframework.cache.interceptor.CacheInterceptor}
+     */
 
     public static class Doctor {
         private String doctorCode;
