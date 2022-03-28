@@ -1,5 +1,6 @@
 package us.fjj.spring.learning.transactionusage;
 
+import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -7,12 +8,18 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import us.fjj.spring.learning.transactionusage.test1.MainConfig1;
 import us.fjj.spring.learning.transactionusage.test1.UserService;
+import us.fjj.spring.learning.transactionusage.test2.MainConfig2;
+import us.fjj.spring.learning.transactionusage.test3.MainConfig3;
+import us.fjj.spring.learning.transactionusage.test3.User;
+import us.fjj.spring.learning.transactionusage.test3.UserService3;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Method;
 import java.util.function.Consumer;
 
 /**
@@ -237,7 +244,220 @@ public class TransactionTest {
     }
 
 
+    /**
+     * 声明式事务
+     * 所谓声明式事务，就是通过配置的方式，比如通过配置文件（xml）或者注解的方式，告诉spring，哪些方法需要spring帮忙管理事务，然后开发者只用关注业务代码，而事务的事情spring自动帮我们控制。
+     *
+     * 比如注解的方式，只需在方法上面加上一个@Transaction注解，那么方法执行之前spring会自动开启一个事务，方法执行完毕之后，会自动提交或者回滚事务，而方法内部没有任何事务相关代码，用起来特别的简单。
+     *
+     */
+    @Test
+    public void test4() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig2.class);
+        us.fjj.spring.learning.transactionusage.test2.UserService userService = context.getBean(us.fjj.spring.learning.transactionusage.test2.UserService.class);
+        try {
+            userService.insert("io", "iokpwd");
+        }catch (RuntimeException ex) {
+            System.out.println("遇到异常，自动回滚！");
+        }
+    }
 
+    /**
+     * 声明式事务的2种实现方式
+     * 1.配置文件的方式，即在spring xml文件中进行统一配置，开发者基本上就不用关注事务的事情了，代码中无需关心任何和事务相关的代码，一切交给spring处理。
+     * 2.注解的方式，只需在需要spring来帮忙管理事务的方法上加上@Transaction注解就可以了，注解的方式相对来说更简洁一些，都需要开发者自己去进行配置，可能有些同学对spring不太熟悉，所以配置这个有一定的风险，做好代码review就可以了。
+     *
+     * 配置文件的方式这里就不讲了，用的比较少。
+     */
+
+    /**
+     * 声明式事务注解方式5个步骤
+     * 1. 启动Spring的注解驱动事务管理功能
+     * 在Spring配置类上加上@EnableTransactionManagement注解
+     *
+     * 原理：当Spring容器启动的时候，发现有@EnableTransactionManagement注解，此时会拦截所有bean的创建，扫描看一下bean上是否有@Transaction注解(类、或者父类、或者接口、或者方法中有这个注解都可以)，如果有这个注解，spring会通过aop的方式给bean生成代理对象，代理对象中会增加一个拦截器，拦截器会拦截bean中public 方法执行，会在方法执行之前启动事务，方法执行完毕之后提交或者回滚事务。
+     * {@link org.springframework.transaction.interceptor.TransactionInterceptor#invoke}
+     * {@link org.springframework.transaction.annotation.EnableTransactionManagement}
+     *
+     *
+     * 2.定义事务管理器
+     * 事务交给spring管理，那么你肯定要创建一个或者多个事务管理器，有这些管理器来管理具体的事务，比如启动事务、提交事务、回滚事务，这些都是管理者来负责的。
+     *
+     * spring中使用PlatformTransactionManager这个接口来表示事务管理者。
+     *
+     *
+     * 3.需使用事务的目标上加@Transactional注解
+     * @Transactional 放在接口上，那么接口的实现类中所有public都被spring自动加上事务。
+     * @Transactional 放在类上，那么当前类以及旗下无限级子类中所有public方法将被spring自动加上事务
+     * @Transactional 放在public方法上，那么该方法将被spring自动加上事务
+     * 注意：@Transactional只对public方法有效
+     * @Transactional注解参数：
+     * transactionManager: 同value，如果为空，默认会从容器中按类型查找一个事务管理器bean
+     * propagation: 事务的传播属性
+     * isolation: 事务的隔离级别，就是制定数据库的隔离级别。
+     * timeout: 事务执行的超时时间（s），执行一个方法，比如有问题，那我不可能等你一天把，可能我最多只能等你10s，10s后还没执行完毕，就弹出一个超时异常。
+     * readOnly: 是否是只读事务，比如某个方法中只有查询操作，我们可以知道事务是只读的，设置了这个参数，可能数据库会做一些性能优化，提升查找速度。
+     * rollbackFor: 定义零个或更多异常类，这些异常必须是Throwable的子类，当方法抛出这些异常及其子类异常的时候，spring会让事务回滚。
+     * rollbackForClassName: 和rollbackFor作用一样，只是这个地方使用的是类名。
+     * noRollbackFor: 定义零个或者多个异常类，这些异常必须是Throwable的子类，当方法抛出这些异常的时候，事务不会回滚。
+     * noRollbackForClassName: 和noRollbackFor作用一样，只是这个地方使用的是类名。
+     *
+     *
+     * 4.执行db业务操作
+     * 在@Transaction标注类或者目标方法上执行业务操作，此时这些方法会自动被spring进行事务管理。
+     * 如下面的insertBatch操作，先删除数据，然后批量插入数据，方法上加上了@Transactional注解，此时这个方法会自动受spring事务控制，要么都成功，要么都失败。
+     * @Component
+     * public class UserService {
+     * @Autowired
+     * private JdbcTemplate jdbcTemplate;
+     * //先清空表中数据，然后批量插入数据，要么都成功要么都失败
+     * @Transactional
+     * public void insertBatch(String... usernames) {
+     *     jdbcTemplate.update("truncate table user");
+     *     for(String username: usernames) {
+     *         jdbcTempalte.update("insert into user (username) value (?)", username);
+     *     }
+     * }
+     * }
+     *
+     *
+     *
+     * 5.启动spring容器，使用bean执行业务操作
+     * @Test
+     * public void test1() {
+     *    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+     *    context.register(MainConfig1.class);
+     *    context.refresh();
+     *    UserService userService = context.getBean(UserService.class);
+     *    userService.insertBatch("zhangshang", "lisi", "wangwu");
+     * }
+     *
+     *
+     * 案例1
+     */
+    @Test
+    public void test5() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig3.class);
+        UserService3 userService3 = context.getBean(UserService3.class);
+        User[] users = new User[]{
+                new User().setUsername("ok").setPassword("oj"),
+                new User().setUsername("ok2").setPassword("oj2"),
+                new User().setUsername("ok3").setPassword("oj3")
+        };
+        int rows = userService3.insertBatch(users);
+        //受影响行数
+        System.out.println(rows);
+        System.out.println(userService3.findAll());
+        /**
+         * 3
+         * [User(username=ok, password=oj), User(username=ok2, password=oj2), User(username=ok3, password=oj3)]
+         */
+    }
+
+    /**
+     * 如何确定方法有没有用到sping事务
+     * 方式一：断点调试
+     * spring事务是由TransactionInterceptor拦截器处理的，最后会调用下面这个方法，设置个断点可以看到详细过程。
+     * {@link org.springframework.transaction.interceptor.TransactionAspectSupport#invokeWithinTransaction(Method, Class, TransactionAspectSupport.InvocationCallback)}
+     *
+     *
+     * 方式二：看日志
+     * spring处理事务的过程，有详细的日志输出，开启日志，控制台就可以看到事务的详细过程了。
+     *
+     * 1.添加maven配置
+     * <dependency>
+     *     <groupId>ch.qos.logback</groupId>
+     *     <artifactId>logback-classic</artifactId>
+     *     <version>1.2.3</version>
+     * </dependency>
+     *
+     * 2.src\main\resources\新建logback.xml
+     * <?xml version="1.0" encoding="UTF-8">
+     * <configuration>
+     *     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+     *          <encoder>
+     *              <pattern>[%d{MM-dd HH:mm:ss.SSS}][%thread{20}:${PID:-}][%x{trace_id}][%level][%logger{56}]:%line:%method\(\)]:%msg%n#########*********#########%n</pattern>
+     *          </encoder>
+     *     </appender>
+     *
+     *     <logger name="org.springframework" level="debug">
+     *          <appender-ref ref="STDOUT"/>
+     *     </logger>
+     * </configuration>
+     */
+
+
+    /**
+     * 总结
+     * 本文讲解了一下spring中编程式事务的使用步骤。
+     * 主要涉及到了2个注解：
+     * @EnableTransactionManagement：开启spring事务管理功能。
+     * @Transaction: 将其加在需要spring管理事务的类、方法、接口上，只会对public方法有效。
+     *
+     */
+
+
+    /**
+     * 详解Spring事务中7种传播行为
+     *
+     * 事务的传播行为用来描述：系统中的一些方法交由Spring来管理事务，当这些方法之间出现嵌套调用的时候，事务所表现出来的行为是什么样的？
+     *
+     * 如何配置事务传播行为？
+     * 通过@Transactional注解中的propagation属性来指定事务的传播行为：
+     * Propagation propagation() default Propagation.REQUIRED;
+     *
+     * 7种传播行为
+     * Propagation是个枚举，有7种值，如下：
+     * 事务传播行为类型             说明
+     * REQUIRED                 如果当前事务管理器中没有事务，就新建一个事务，如果已经存在一个事务，就加入到这个事务中。这是最常见的选择，是默认的传播行为。
+     * SUPPORTS                 支持当前事务，如果当前事务管理器中没有事务，就以非事务方式执行。
+     * MANDATORY                （强制）使用当前的事务，如果当前事务管理器中没有事务，就抛出异常。
+     * REQUIRES_NEW             新建事务，如果当前事务管理器中存在事务，把当前事务挂起，然后会新建一个事务。
+     * NOT_SUPPORTED            以非事务方式执行操作，如果当前事务管理器中存在事务，就把当前事务挂起。
+     * NEVER                    以非事务方式执行，如果当前事务管理器中存在事务，则抛出异常。
+     * NESTED                   如果当前事务管理器中存在事务，则在嵌套事务内执行；如果当前事务管理器中没有事务，则执行与PROPAGATION_REQUIRED类似的操作。
+     *
+     * 注意：这7种传播行为有个前提，他们的事务管理器是同一个的时候，才会有上面描述中的表现行为。
+     *
+     * 知识点
+     * 1.Spring声明式事务处理事务的过程
+     * spring声明式事务是通过事务拦截器TransactionInterceptor拦截目标方法，来实现事务管理的功能的，事务管理器处理过程大致如下：
+     * 1.获取事务管理器
+     * 2.通过事务管理器开启事务
+     * try {
+     *     3.提交业务方法执行db操作
+     *     4.提交事务
+     * }catch(RuntimeException | Error) {
+     *     5.回滚事务
+     * }
+     *
+     *
+     *
+     * 2.何时事务会回滚？
+     * 默认情况下，目标方法抛出RuntimeException或者Error的时候，事务会被回滚。
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     * 3.Spring事务管理器中的Connection和业务中操作db的Connection如何使用同一个的？
+     * 以DataSourceTransactionManager为事务管理器，操作db使用JdbcTemplate来说明一下。
+     * 创建DataSourceTransactionManager和JdbcTemplate的时候都需要指定dataSource，需要将他俩的dataSource指定为同一个对象。
+     * 当事务管理器开启事务的时候，会通过dataSource.getConnection()方法获取一个db连接connection，然后会将dataSource->connection丢到一个Map中，然后将map放到ThreadLocal中。
+     * 当jdbcTemplate执行sql的时候，以jdbcTemplate.dataSource去上面的ThreadLocal中查找，是否有可用的连接，如果有，就直接拿来用，否则调用jdbcTemplate.dataSource.getConnnection()方法获取一个连接来用。
+     * 所以spring中可以确保事务管理器中的Connection和JdbcTemplate中操作db的Connection是同一个，这样才能确保spring可以控制事务。
+     *
+     *
+     * 代码验证：
+     * 测试用例test4
+     * before方法会在每个@Test标注的方法之前执行一次，这个方法主要用来做一些准备工作：启动spring容器、清理2个表中的数据；after方法会在每个@Test标注的方法执行完毕之后执行一次，我们在这个里面输出2张表的数据；方便查看测试用例效果。
+     */
+    @Test
+    public void test6() {
+        //详见TransactionDemoTest.java
+    }
 
 
 
