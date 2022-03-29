@@ -1,4 +1,4 @@
-package us.fjj.spring.learning.transactionusage.test4;
+package us.fjj.spring.learning.transactionusage.test6;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -13,26 +13,35 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @Configuration
 @ComponentScan
-public class MainConfig4 {
+public class MainConfig6 {
     @Bean
-    public javax.sql.DataSource getDataSource() {
+    public DataSource dataSource() {
         org.apache.tomcat.jdbc.pool.DataSource dataSource = new org.apache.tomcat.jdbc.pool.DataSource();
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
         dataSource.setUrl("jdbc:mysql://127.0.0.1:3306/test1?characterEncoding=UTF-8");
-        dataSource.setUsername("r");
-        dataSource.setPassword("adasg");
+        dataSource.setUsername("g");
+        dataSource.setPassword("re");
         dataSource.setInitialSize(5);
         return dataSource;
     }
 
     @Bean
-    public PlatformTransactionManager transactionManager(DataSource dataSource) {
+    public JdbcTemplate jdbcTemplate1(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+
+    @Bean
+    public JdbcTemplate jdbcTemplate2(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+
+    @Bean
+    public PlatformTransactionManager transactionManager1(DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
     }
 
-    //定义一个JdbcTemplate，用于执行DB操作
     @Bean
-    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
+    public PlatformTransactionManager transactionManager2(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
     }
 }

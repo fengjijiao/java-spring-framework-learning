@@ -20,4 +20,10 @@ public class User1Service {
     public void requiresNew(String name) {
         this.jdbcTemplate.update("insert into user1 (name) value (?)", name);
     }
+
+    //nested嵌套
+    @Transactional(propagation = Propagation.NESTED)
+    public void nested(String name) {
+        this.jdbcTemplate.update("insert into user1(name) value (?)", name);
+    }
 }

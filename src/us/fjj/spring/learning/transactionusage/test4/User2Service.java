@@ -32,4 +32,15 @@ public class User2Service {
         this.jdbcTemplate.update("insert into user2 (name) value (?)", name);
         throw new RuntimeException();
     }
+
+    @Transactional(propagation = Propagation.NESTED)
+    public void nested(String name) {
+        this.jdbcTemplate.update("insert into user2(name) value (?)", name);
+    }
+
+    @Transactional(propagation = Propagation.NESTED)
+    public void nestedException(String name) {
+        this.jdbcTemplate.update("insert into user2(name) value (?)", name);
+        throw new RuntimeException();
+    }
 }

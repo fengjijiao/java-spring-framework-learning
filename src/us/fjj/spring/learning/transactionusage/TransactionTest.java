@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.lang.Nullable;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -460,8 +461,156 @@ public class TransactionTest {
     }
 
 
+    /**
+     * Spring如何管理多数据源事务？
+     * 本篇内容：通过原理和大量案例带大家吃透Spring多数据源事务。
+     * Spring中通过事务管理器来控制事务，每个数据源都需要指定一个事务管理器，如果我们的项目中需要操作多个数据库，那么需要我们配置多个数据源，也就需要配置多个数据管理器。
+     *
+     *
+     * 多数据源事务使用2个步骤
+     * 1、为每个数据源定义一个事务管理器
+     * 如下面代码，有2个数据源分别连接数据源ds1和ds2,然后为每个数据源定义1个事务管理器，此时spring容器中有2个数据源和2个事务管理器。
+     *
+     * 2.Spring配置类
+     * 定义2个数据源
+     * 定义2个JdbcTemplate
+     * 2个数据源对应2个事务管理器
+     *
+     * 3.Ds1User1Service
+     * 用来操作user1.user1表，注意下面代码中@Transactional注解中transactionManager的值为transactionManager1
+     * 同样方式定义另外3个Service
+     *
+     * 4.Tx1Service&Tx2Service
+     *
+     * 案例1
+     */
+    @Test
+    public void test7() {
+        //详见Test5Test.java
+    }
+    /**
+     * 案例2
+     * 在MainConfig6中定义了一个数据源dataSource，2个jdbcTemplate: jdbcTemplate1和jdbcTemplate2，他们的dataSource都是dataSource。
+     * 2个事务管理器： transactionManager1和transactionManager2，他们的dataSource都是dataSource。
+     * 这样写是不是很奇怪，不是说一个数据源定义一个事务管理器么，这什么操作？
+     * 不急，我们这样写，是为了让你更深入了解其原理。
+     */
+    @Test
+    public void test8() {
+        //详见Test6Test.java
+    }
 
 
+    /**
+     * 总结
+     * 1.本文介绍了多数据源事务的使用，2个步骤：先为每个数据源定义一个事务管理器，然后在@Transactional中指定具体要使用的事务管理器。
+     * 2.事务管理器运行过程、事务管理器如何判断当前是否有事务，这2点非常重要。
+     */
+
+
+    /**
+     * spring事务源码解析
+     * spring编程式事务源码深度解析，理解spring事务的本质。
+     *
+     * 回顾一下编程式事务用法
+     */
+    @Test
+    public void test9() {
+        //定义一个数据源
+        org.apache.tomcat.jdbc.pool.DataSource dataSource = new org.apache.tomcat.jdbc.pool.DataSource();
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setUrl("jdbc:mysql://39.173.182.109:3306/test1?characterEncoding=UTF-8");
+        dataSource.setUsername("f");
+        dataSource.setPassword("fengjijiaodatebase");
+        dataSource.setInitialSize(5);
+        //定义一个JdbcTemplate，用来方便执行数据库增删改查
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        //1.定义事务管理器，给其指定一个数据源（可以把事务管理器想象为一个人，这个人来负责事务的控制操作）
+        PlatformTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+        //2.定义事务属性：TransactionDefinition，TransactionDefinition可以用来配置事务的属性信息，比如事务的隔离级别、事务超时时间、事务传播方式、是否是只读事务等等。
+        TransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+        //3.获取事务：调用platformTransactionManager.getTransaction开启事务操作，得到事务状态（TransactionStatus）对象
+        TransactionStatus transactionStatus = transactionManager.getTransaction(transactionDefinition);
+        //4.执行业务操作，下面就执行2个插入操作
+        try {
+            System.out.println("before:"+jdbcTemplate.queryForList("select * from user1"));
+            jdbcTemplate.update("insert into user1 (name) value (?)", "test1-1");
+            jdbcTemplate.update("insert into user1 (name) value (?)", "test1-2");
+            //5.提交事务：platformTransactionManager.commit
+            transactionManager.commit(transactionStatus);
+        } catch (Exception ex) {
+            //6.回滚事务：platformTransactionManager.rollback
+            transactionManager.rollback(transactionStatus);
+        }
+        System.out.println("after:"+jdbcTemplate.queryForList("select * from user1"));
+    }
+
+    /**
+     * 编程式事务过程
+     * 1.定义事务属性信息：TransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+     * 2.定义事务管理器：PlatformTransactionManager platformTransactionManager = new DataSourceTransactionManager(dataSource);
+     * 3.获取事务：TransactionStatus transactionStatus = platformTransactionManager.getTransaction(transactionDefinition);
+     * 4.执行sql操作：比如上面通过JdbcTemplate的各种方法执行各种sql操作
+     * 5.提交事务或者回滚事务
+     *
+     *
+     *
+     * 获取事务的过程：
+     * 1.获取db连接：从事务管理器的dataSource中调用getConnection获取一个新的数据库连接，将连接置为手动提交
+     * 2.将dataSource关联连接丢到ThreadLocal中；将第一步获取到的连接丢到ConnectionHolder中，然后将事务管理器的dataSource->ConnectionHolder丢到了resource ThreadLocal中，这样我们可以通过dataSource在ThreadLocal中获取关联的数据库连接。
+     * 3.尊卑事务同步：将事务的一些信息放到ThreadLocal中。
+     *
+     *
+     * 存在事务的情况如何走？
+     *下面来看另外一个流程，REQUIRED中嵌套一个REQUIRES_NEW,然后走到REQUIRES_NEW的时候，代码是如何运行的？大致过程如下：
+     * 1.判断上下文中是否有事务
+     * 2.挂起当前事务
+     * 3.开启新事务，并执行新事务
+     * 4.恢复被挂起的事务
+     *
+     *
+     *
+     * 事务执行过程中的回调结果：TransactionSynchronization
+     * 作用：spring事务运行的过程中，给开发者预留了一些扩展点，在事务执行的不同阶段，将回调扩展点中的一些方法。
+     * 比如我们想在事务提交之前、提交之后、回滚之前、回滚之后做一些事务，那么我们可以通过扩展点来实现。
+     *
+     * 扩展点的用法
+     * 1.定义事务TransactionSynchronization对象
+     * TransactionSynchronization接口中的方法在spring事务执行的过程中会自动被回调
+     * 2.将TransactionSynchronization注册到当前事务中
+     * 通过下面静态方法将事务扩展点TransactionSynchronization注册到当前事务中
+     * TransactionSynchronizationManager.registerSynchronization(transactionSynchronization);
+     * 当有多个TransactionSynchronization的时候，可以指定其顺序，可以实现org.springframework.core.Ordered接口，来指定顺序，从小到大的顺序被调用，TransactionSynchronization有个默认适配器TransactionSynchronizationAdapter，这个类实现了Ordered接口，所以，如果我们要使用的时候，直接使用TransactionSynchronizationAdapter这个类。
+     * 3.回调扩展点TransactionSynchronization中的方法
+     * TransactionSynchronization中的方法是spring事务管理器自动调用的，本文上面有提到，事务管理器在事务提交或者事务回滚的过程中，有很多地方会调用trigger开头的方法，这个trigger方法内部就会遍历当前事务中的transactionSynchronization列表，然后调用transactionSynchronization内部的一些指定的方法。
+     *
+     * 案例
+     */
+    @Test
+    public void test10() {
+        //见Test7Test.java
+    }
+
+
+    /**
+     * @Transactional事务源码解析
+     *
+     * 2.@Transactional事务的用法
+     * 咱们先来回顾一下，@Transactional事务的用法，特别简单，2个步骤
+     * 1.在需要让spring管理事务的方法上添加@Transactional注解
+     * 2.在spring配置类上添加@EnableTransactionManagement注解，这步特别重要，别给忘了，有了这个注解之后，@Transactional标注的方法才会生效。
+     *
+     * 3.@Transactional事务原理
+     * 原理比较简单，内部是通过spring aop的功能，通过拦截器拦截@Transactional方法的执行，在方法前后添加事务的功能。
+     *
+     * 4.@EnableTransactionManagement注解作用
+     * @EnableTransactionManagement注解会开启spring自动管理事务的功能，有了这个注解之后，spring容器启动的过程中，会拦截所有bean的创建过程，判断bean是否需要让spring来管理事务，即判断bean中是否有@Transaction注解，判断规则如下：
+     * 1.一直沿着当前bean的类向上找，先从当前类中，然后父类，父类的父类，当前类的接口、接口的父接口、父接口的父接口，一直向上找，一下这些类型上面是否有@Transactional注解
+     * 2.类的任意public方法上面是否有@Transactional注解
+     * 如果bean满足上面任意一个规则，就会被spring容器通过aop的方式创建代理，代理中会添加一个拦截器。
+     * {@link org.springframework.transaction.interceptor.TransactionInterceptor}
+     * TransactionInterceptor拦截器是关键，他会拦截@Transactional方法的执行，在方法执行前后添加事务的功能，这个拦截器中大部分都是编程式事务的代码。
+     */
 
 
 
