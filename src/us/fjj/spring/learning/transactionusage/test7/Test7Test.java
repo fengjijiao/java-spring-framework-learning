@@ -20,8 +20,8 @@ public class Test7Test {
         org.apache.tomcat.jdbc.pool.DataSource dataSource = new org.apache.tomcat.jdbc.pool.DataSource();
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
         dataSource.setUrl("jdbc:mysql://127.0.0.1:3306/test1?characterEncoding=UTF-8");
-        dataSource.setUsername("df");
-        dataSource.setPassword("efg");
+        dataSource.setUsername("e");
+        dataSource.setPassword("dfsf");
         dataSource.setInitialSize(5);
         //定义一个JdbcTemplate，用来方便执行数据库增删改查
         this.jdbcTemplate = new JdbcTemplate(dataSource);
